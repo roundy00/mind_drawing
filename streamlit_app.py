@@ -26,8 +26,6 @@ try:
     )
 except FileNotFoundError:
     st.error("이미지 파일을 찾을 수 없습니다.")
-
-st.title("🎨 아동 그림 기반 멀티모달 대화형 AI")
     
 st.title("🎨 아동 그림 기반 멀티모달 대화형 AI")
 st.caption("3차 프로젝트: SAM2 + Wav2Vec2 + RAG 통합 프로토타입")
