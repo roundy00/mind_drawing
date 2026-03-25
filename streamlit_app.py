@@ -2,20 +2,32 @@ import streamlit as st
 from PIL import Image
 import time
 import random
+import base64
 
 # 1. 페이지 설정 및 제목 (메인 통합형)
 st.set_page_config(page_title="아동 심리 대화형 AI", layout="wide")
 
-# --- 배너 이미지 추가 (수정된 부분) ---
-# 로컬 폴더에 이미지가 있다고 가정합니다.
+# 배너이미지 추가
+def get_image_base64(path):
+    with open(path, "rb") as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+# 1. 이미지 파일을 Base64로 변환 (로컬 파일을 HTML에 넣기 위함)
 try:
-    banner_image = Image.open("main_concept_image.webp")
-    # 이미지를 메인 상단에 배너처럼 시원하게 넣습니다.
-    # use_container_width=True를 사용해 화면 너비에 맞춥니다.
-    st.image(banner_image, use_container_width=True, alt_text="무지개와 유니콘이 그려진 아동용 그림 배너 - 심리 분석 서비스 메인")
+    img_path = "main_concept_image.webp"
+    img_base64 = get_image_base64(img_path)
+
+    # 2. HTML 태그로 이미지 삽입 (alt 속성 포함)
+    # style="width:100%"를 주면 st.image의 use_container_width=True와 같은 효과가 납니다.
+    st.markdown(
+        f'<img src="data:image/png;base64,{img_base64}" alt="무지개와 유니콘이 그려진 아동용 그림 배너" style="width:100%;">',
+        unsafe_allow_html=True
+    )
 except FileNotFoundError:
-    # 이미지가 없을 경우를 대비한 안전장치
-    st.error("'image_2.png' 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
+    st.error("이미지 파일을 찾을 수 없습니다.")
+
+st.title("🎨 아동 그림 기반 멀티모달 대화형 AI")
     
 st.title("🎨 아동 그림 기반 멀티모달 대화형 AI")
 st.caption("3차 프로젝트: SAM2 + Wav2Vec2 + RAG 통합 프로토타입")
