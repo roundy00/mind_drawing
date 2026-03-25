@@ -5,6 +5,18 @@ import random
 
 # 1. 페이지 설정 및 제목 (메인 통합형)
 st.set_page_config(page_title="아동 심리 대화형 AI", layout="wide")
+
+# --- 배너 이미지 추가 (수정된 부분) ---
+# 로컬 폴더에 이미지가 있다고 가정합니다.
+try:
+    banner_image = Image.open("main_concept_image.webp")
+    # 이미지를 메인 상단에 배너처럼 시원하게 넣습니다.
+    # use_container_width=True를 사용해 화면 너비에 맞춥니다.
+    st.image(banner_image, caption="아동 그림 심리 분석 배너", use_container_width=True)
+except FileNotFoundError:
+    # 이미지가 없을 경우를 대비한 안전장치
+    st.error("'image_2.png' 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
+    
 st.title("🎨 아동 그림 기반 멀티모달 대화형 AI")
 st.caption("3차 프로젝트: SAM2 + Wav2Vec2 + RAG 통합 프로토타입")
 
