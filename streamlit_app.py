@@ -12,7 +12,7 @@ try:
     banner_image = Image.open("main_concept_image.webp")
     # 이미지를 메인 상단에 배너처럼 시원하게 넣습니다.
     # use_container_width=True를 사용해 화면 너비에 맞춥니다.
-    st.image(banner_image, caption="아동 그림 심리 분석 배너", use_container_width=True)
+    st.image(banner_image, use_container_width=True, alt_text="무지개와 유니콘이 그려진 아동용 그림 배너 - 심리 분석 서비스 메인")
 except FileNotFoundError:
     # 이미지가 없을 경우를 대비한 안전장치
     st.error("'image_2.png' 파일을 찾을 수 없습니다. 경로를 확인해주세요.")
