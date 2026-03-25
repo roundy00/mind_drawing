@@ -6,7 +6,7 @@ import random
 # 1. 페이지 설정 및 제목 (메인 통합형)
 st.set_page_config(page_title="아동 심리 대화형 AI", layout="wide")
 st.title("🎨 아동 그림 기반 멀티모달 대화형 AI")
-st.caption("3차 프로젝트: YOLOv8 + SAM2 + Wav2Vec2 + RAG 통합 프로토타입")
+st.caption("3차 프로젝트: SAM2 + Wav2Vec2 + RAG 통합 프로토타입")
 
 # 2. 내부 처리 (숨김) - 가중치 로드 시뮬레이션
 if 'models_loaded' not in st.session_state:
