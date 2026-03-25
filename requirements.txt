@@ -1,12 +1,22 @@
-# requirements.txt
+# --- 핵심 프레임워크 ---
 streamlit
+
+# --- 이미지 및 데이터 처리 ---
+Pillow
+pandas
+numpy
+opencv-python-headless
+
+# --- 모델 및 AI (가중치 로드용) ---
 torch
 torchvision
 torchaudio
 transformers
+
+# --- 오디오 분석 (Wav2Vec2 관련) ---
 librosa
-opencv-python-headless  # opencv-python 대신 이걸 써야 서버에서 에러가 안 납니다.
-pillow
-pandas
-numpy
-base64
+soundfile
+
+# --- (선택) RAG 및 벡터 DB 구축 시 필요 ---
+# langchain
+# chromadb
