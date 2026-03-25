@@ -48,9 +48,9 @@ with col_input1:
         st.image(image, use_container_width=True, caption="와! 정말 멋진 그림이야! ✨")
 
 with col_input2:
-    st.subheader("🧒 너는 몇 살이니?")
+    st.subheader("🧒 너에 대해 알려줘!")
     child_age = st.slider("내 나이는 이만큼이야!", 5, 13, 7)
-    child_sex = st.radio("친구는 남자아이니, 여자아이니?", ["멋진 남자아이", "예쁜 여자아이"], horizontal=True)
+    child_sex = st.radio("너는 남자니, 여자니?", ["남자", "여자"], horizontal=True)
     
     st.write("---")
     analyze_btn = st.button("마음친구야, 내 그림 좀 봐줄래? 🚀", use_container_width=True)
