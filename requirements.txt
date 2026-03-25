@@ -9,3 +9,4 @@ opencv-python-headless  # opencv-python 대신 이걸 써야 서버에서 에러
 pillow
 pandas
 numpy
+base64
