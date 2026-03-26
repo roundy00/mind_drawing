@@ -61,116 +61,70 @@ if analyze_btn and img_file:
     st.session_state['analysis_done'] = True
     st.divider()
 
-    # --- [핵심] YOLO 모델 로드 및 추론 ---
     with st.spinner("AI 친구가 그림을 꼼꼼하게 살펴보고 있어요... 🧐"):
         try:
-            model = YOLO('best.pt')  # 다영님의 가중치 파일
+            model = YOLO('best.pt') 
+            # PIL 이미지를 모델에 바로 전달
             results = model.predict(source=image, save=False, conf=0.25)
             
-            # 탐지된 데이터를 담을 리스트
             extracted_data = []
+            found_items = [] # 진단 메시지용 리스트 초기화
+            
+            # 클래스 번호를 다정한 한국어 이름으로 바꾸는 매핑
+            # 모델의 'names' 인덱스 순서와 일치해야 합니다.
+            friendly_names = {
+                0: "나무", 1: "기둥", 2: "수관", 3: "가지", 4: "뿌리", 5: "나뭇잎",
+                6: "꽃", 7: "열매", 8: "그네", 9: "새", 10: "다람쥐",
+                11: "구름", 12: "달", 13: "별", 14: "사람", 15: "머리",
+                16: "얼굴", 17: "눈", 18: "코", 19: "입", 20: "귀",
+                # ... (모델 학습 시 설정한 인덱스에 맞춰 계속 추가)
+                34: "집", 35: "지붕", 37: "문", 38: "창문", 46: "태양"
+            }
             
             for r in results:
-                names = r.names
                 for box in r.boxes:
-                    class_id = int(box.cls[0])
-                    label = names[class_id]
-                    confidence = float(box.conf[0])
-                # --- [심리상담용 전처리] 레이블을 아이용 친근한 단어로 변경 ---
-                # 클래스매핑
-                # 통합된 전체 클래스 매핑 (총 47종)
-                class_mapping = {
-                    # 나무 관련 (통합)
-                    "나무전체": 0, "나무": 0,
-                    "기둥": 1,
-                    "수관": 2,
-                    "가지": 3,
-                    "뿌리": 4,
-                    "나뭇잎": 5,
-                    "꽃": 6, # '꽃' 라벨 통합
-                    "열매": 7,
-                    "그네": 8,
-                    "새": 9,
-                    "다람쥐": 10,
-                    "구름": 11,
-                    "달": 12,
-                    "별": 13,
-                
-                    # 사람 관련 (남자/여자 공통 및 구분)
-                    "사람전체": 14,
-                    "머리": 15,
-                    "얼굴": 16,
-                    "눈": 17,
-                    "코": 18,
-                    "입": 19,
-                    "귀": 20,
-                    "남자머리카락": 21,
-                    "목": 22,
-                    "상체": 23,
-                    "팔": 24,
-                    "손": 25,
-                    "다리": 26,
-                    "발": 27,
-                    "단추": 28,
-                    "주머니": 29,
-                    "운동화": 30,
-                    "남자구두": 31,
-                    "여자머리카락": 32,
-                    "여자구두": 33,
-                
-                    # 집 관련 및 배경
-                    "집전체": 34,
-                    "지붕": 35,
-                    "집벽": 36,
-                    "문": 37,
-                    "창문": 38,
-                    "굴뚝": 39,
-                    "연기": 40,
-                    "울타리": 41,
-                    "길": 42,
-                    "연못": 43,
-                    "산": 44,
-                    "잔디": 45,
-                    "태양": 46
-                }
-                display_name = class_mapping.get(label, label)
-                
-                # 박스 크기(면적) 계산으로 '크기' 표현 자동화
-                bbox = box.xywh[0] # [x, y, w, h]
-                area = float(bbox[2] * bbox[3])
-                size_desc = "커다란" if area > 50000 else "귀여운" # 이미지 크기에 따라 조정 필요
-                
-                extracted_data.append({
-                    "찾은 것": display_name,
-                    "크기": f"{size_desc} {display_name}야!",
-                    "느낌": "정성 가득 그려졌어 ✨"
-                })
+                    cls_id = int(box.cls[0])
+                    # 매핑에 있으면 한국어로, 없으면 모델 기본 이름 사용
+                    display_name = friendly_names.get(cls_id, r.names[cls_id])
+                    
+                    # 면적 계산을 통한 크기 묘사
+                    bbox = box.xywh[0] # [x, y, w, h]
+                    area = float(bbox[2] * bbox[3])
+                    size_desc = "커다란" if area > (image.size[0] * image.size[1] * 0.2) else "귀여운"
+                    
+                    found_items.append(display_name)
+                    extracted_data.append({
+                        "찾은 것": display_name,
+                        "크기": f"{size_desc} {display_name}야!",
+                        "느낌": "정성 가득 그려졌어 ✨"
+                    })
         except Exception as e:
-            st.error(f"모델을 불러오는 중에 문제가 생겼어: {e}")
+            st.error(f"모델 분석 중에 문제가 생겼어: {e}")
             extracted_data = []
-    
+            found_items = []
+
     st.header("2. 네 마음속에 이런 보물이 들어있구나! 💎")
     
     col_res1, col_res2 = st.columns([2, 1])
     with col_res1:
         st.subheader("🎨 그림 속에서 찾은 이야기들")
         if extracted_data:
-            # 추출된 실제 데이터를 테이블로 표시
             st.table(pd.DataFrame(extracted_data))
-            
-            # 탐지된 박스가 그려진 이미지 보여주기
-            res_plotted = results[0].plot() # BGR numpy array
+            # 분석 결과 이미지 (Bounding Box 포함)
+            res_plotted = results[0].plot() # BGR 형태
             st.image(res_plotted, channels="BGR", use_container_width=True, caption="마음친구가 분석한 그림이야!")
         else:
-            st.info("그림 속에서 아직 이야기를 찾지 못했어. 다시 한번 보여줄래?")
+            st.info("그림 속에서 아직 이야기를 찾지 못했어. 조금 더 크게 그려볼까?")
 
     with col_res2:
         st.subheader("🧬 마음친구가 들려주는 이야기")
         
-        # 탐지된 객체에 따라 동적으로 진단 멘트 생성
-        if extracted_data:
-            found_items = [d["찾은 것"] for d in extracted_data]
-            diagnosis_msg = f"와! 그림 속에서 {', '.join(found_items[:2])} 등을 찾았어. " \
+        # TypeError 방지를 위해 found_items가 있을 때만 join 실행
+        if found_items:
+            # 중복 제거 후 최대 2개만 노출
+            unique_items = list(dict.fromkeys(found_items))
+            items_str = ", ".join(unique_items[:2])
+            diagnosis_msg = f"와! 그림 속에서 **{items_str}** 등을 찾았어. " \
                             f"정말 따뜻한 느낌이 드는 그림이야! 이 그림을 그릴 때 어떤 기분이었어?"
         else:
             diagnosis_msg = "그림을 보고 있으니 마음이 편안해져. 어떤 이야기를 담고 있는지 더 듣고 싶어!"
