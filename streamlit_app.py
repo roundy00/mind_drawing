@@ -5,9 +5,54 @@ import random
 import base64
 import pandas as pd
 from ultralytics import YOLO
+from streamlit_lottie import st_lottie
+import requests
 
+# ======================================================================
+st.markdown("""
+    <style>
+    /* 전체 배경색을 따뜻한 미색으로 */
+    .stApp {
+        background-color: #FFF9F0;
+    }
+    /* 버튼을 둥글고 예쁜 핑크색으로 */
+    div.stButton > button:first-child {
+        background-color: #FFB7B2;
+        color: white;
+        border-radius: 30px;
+        border: none;
+        height: 3em;
+        font-weight: bold;
+        transition: all 0.3s;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #FF9AA2;
+        transform: scale(1.05); /* 마우스 올리면 살짝 커지는 효과 */
+    }
+    /* 카드 느낌의 박스 디자인 */
+    .reportview-container .main .block-container {
+        padding-top: 2rem;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+# ======================================================================
 # 1. 페이지 설정
 st.set_page_config(page_title="마음 그리는 AI 친구", layout="wide")
+
+# 애니메이션을 가져오는 함수
+def load_lottieurl(url: str):
+    r = requests.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
+
+# 아이들이 좋아할 만한 귀여운 애니메이션들 (LottieFiles 무료 소스)
+lottie_loading = load_lottieurl("https://assets5.lottiefiles.com/packages/lf20_uwR49f.json") # 생각하는 캐릭터
+lottie_success = load_lottieurl("https://assets3.lottiefiles.com/packages/lf20_touohxv0.json") # 하트 팡팡
+lottie_hello = load_lottieurl("https://assets9.lottiefiles.com/packages/lf20_myejioos.json") # 손 흔드는 친구
+
+# 상단에 환영 인사와 함께 손 흔드는 캐릭터 배치
+st_lottie(lottie_hello, speed=1, loop=True, quality="low", height=200, key="hello")
 
 # 배너이미지 추가 (Base64 변환)
 def get_image_base64(path):
@@ -61,7 +106,11 @@ if analyze_btn and img_file:
     st.session_state['analysis_done'] = True
     st.divider()
 
-    with st.spinner("AI 친구가 그림을 꼼꼼하게 살펴보고 있어요... 🧐"):
+    # 분석 중 애니메이션
+    with st.empty(): # 공간을 확보했다가 분석 끝나면 교체
+        st_lottie(lottie_loading, speed=1, height=300, key="loading")
+        st.write("### 마음친구가 그림 속 이야기를 듣고 있어... 🤫")
+        
         try:
             model = YOLO('best.pt') 
             # PIL 이미지를 모델에 바로 전달
@@ -98,11 +147,19 @@ if analyze_btn and img_file:
                         "크기": f"{size_desc} {display_name}야!",
                         "느낌": "정성 가득 그려졌어 ✨"
                     })
+
+                    time.sleep(3) # 분석 느낌을 주기 위한 잠깐의 대기
+                    st.empty() # 애니메이션 지우기
+                    
         except Exception as e:
             st.error(f"모델 분석 중에 문제가 생겼어: {e}")
             extracted_data = []
             found_items = []
 
+    # 분석 완료 후 하트 튀어나오기!
+    st_lottie(lottie_success, speed=1, loop=False, height=300, key="success")
+    st.balloons()
+    
     st.header("2. 네 마음속에 이런 보물이 들어있구나! 💎")
     
     col_res1, col_res2 = st.columns([2, 1])
