@@ -8,6 +8,7 @@ from ultralytics import YOLO
 from streamlit_lottie import st_lottie
 import requests
 import json
+import os
 
 
 # 1. 페이지 설정
