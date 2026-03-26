@@ -41,18 +41,17 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 # ======================================================================
+# --- 애니메이션 로드 함수 (로컬 전용) ---
+def load_lottiefile(filepath: str):
+    if not os.path.exists(filepath):
+        return None  # 파일이 없어도 에러 대신 None 반환
+    with open(filepath, "r", encoding="utf-8") as f:
+        return json.load(f)
 
-# 애니메이션을 가져오는 함수
-def load_lottieurl(url: str):
-    r = requests.get(url)
-    if r.status_code != 200:
-        return None
-    return r.json()
-
-# 아이들이 좋아할 만한 귀여운 애니메이션들 (LottieFiles 무료 소스)
-lottie_loading = load_lottieurl("https://lottie.host/d9bea35e-bb44-4fb2-a5e3-dd474fccd4a0/p0fA7qS8oA.json") # 생각하는 캐릭터
-lottie_success = load_lottieurl("https://lottie.host/6c17f156-c9ce-4da4-93af-7aab229312c4/9AOf7E0O26.json") # 하트 팡팡
-lottie_hello = load_lottieurl("https://lottie.host/fcf7bb52-7dbd-42b7-8849-5bb2ec41ed3b/Xn7V2N6LgL.json") # 손 흔드는 곰돌
+# --- 1. 파일 로드 (파일명은 실제 저장하신 이름으로 맞춰주세요) ---
+lottie_hello = load_lottiefile("Bath3_Hi emote.json")    # 인사하는 캐릭터
+lottie_loading = load_lottiefile("animal.json") # 분석 중 캐릭터
+lottie_success = load_lottiefile("Confetti.json") # 축하 효과
 
 # 상단에 환영 인사와 함께 손 흔드는 캐릭터 배치
 st_lottie(lottie_hello, speed=1, loop=True, quality="low", height=200, key="hello")
