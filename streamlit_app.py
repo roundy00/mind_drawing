@@ -133,7 +133,7 @@ if analyze_btn and img_file:
                     "잔디": 45,
                     "태양": 46
                 }
-                display_name = friendly_names.get(label, label)
+                display_name = class_mapping.get(label, label)
                 
                 # 박스 크기(면적) 계산으로 '크기' 표현 자동화
                 bbox = box.xywh[0] # [x, y, w, h]
