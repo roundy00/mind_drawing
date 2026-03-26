@@ -8,6 +8,7 @@ numpy
 opencv-python-headless
 
 # --- 모델 및 AI (가중치 로드용) ---
+ultralytics
 torch
 torchvision
 torchaudio
