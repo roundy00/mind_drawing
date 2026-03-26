@@ -112,27 +112,22 @@ with col_input2:
 if analyze_btn and img_file:
     st.session_state['analysis_done'] = True
     st.divider()
-    
-    def run_object_detection(image_path, model_path='best.pt'):
-        """
-        이미지 경로와 모델 경로를 받아 객체를 탐지하고 결과를 반환합니다.
-        """
-        # 1. 모델 로드 (다영님이 학습시킨 가중치 파일)
-        model = YOLO(model_path)
-        
-        # 2. 이미지 추론 (PIL 이미지나 경로 모두 가능)
-        results = model.predict(source=image_path, save=False, conf=0.25)
-        
-        # 3. 결과 해석 및 출력
-        for r in results:
-            # 탐지된 객체의 이름들 확인
-            names = r.names
-            for box in r.boxes:
-                class_id = int(box.cls[0])
-                label = names[class_id]
-                confidence = float(box.conf[0])
-                bbox = box.xyxy[0].tolist() # [xmin, ymin, xmax, ymax]
-                
+
+    # --- [핵심] YOLO 모델 로드 및 추론 ---
+    with st.spinner("AI 친구가 그림을 꼼꼼하게 살펴보고 있어요... 🧐"):
+        try:
+            model = YOLO('best.pt')  # 다영님의 가중치 파일
+            results = model.predict(source=image, save=False, conf=0.25)
+            
+            # 탐지된 데이터를 담을 리스트
+            extracted_data = []
+            
+            for r in results:
+                names = r.names
+                for box in r.boxes:
+                    class_id = int(box.cls[0])
+                    label = names[class_id]
+                    confidence = float(box.conf[0])
                 # --- [심리상담용 전처리] 레이블을 아이용 친근한 단어로 변경 ---
                 # 클래스매핑
                 # 통합된 전체 클래스 매핑 (총 47종)
@@ -206,25 +201,33 @@ if analyze_btn and img_file:
             st.error(f"모델을 불러오는 중에 문제가 생겼어: {e}")
             extracted_data = []
     
-        return results
-    
     st.header("2. 네 마음속에 이런 보물이 들어있구나! 💎")
     
     col_res1, col_res2 = st.columns([2, 1])
     with col_res1:
         st.subheader("🎨 그림 속에서 찾은 이야기들")
-        # 아이들이 보기 편하게 '객체' 대신 '찾은 것'으로 표현
-        extracted_data = [
-            {"찾은 것": "튼튼한 우리 집", "크기": "이만큼 커요!", "느낌": "따뜻해 보여요"},
-            {"찾은 것": "쑥쑥 자라는 나무", "크기": "귀여워요", "느낌": "힘이 세 보여요"},
-            {"찾은 aristocratic": "반짝이는 눈", "크기": "동글동글해요", "느낌": "궁금한 게 많아 보여요"}
-        ]
-        st.table(pd.DataFrame(extracted_data)) # 데이터프레임보다 테이블이 더 직관적일 수 있음
+        if extracted_data:
+            # 추출된 실제 데이터를 테이블로 표시
+            st.table(pd.DataFrame(extracted_data))
+            
+            # 탐지된 박스가 그려진 이미지 보여주기
+            res_plotted = results[0].plot() # BGR numpy array
+            st.image(res_plotted, channels="BGR", use_container_width=True, caption="마음친구가 분석한 그림이야!")
+        else:
+            st.info("그림 속에서 아직 이야기를 찾지 못했어. 다시 한번 보여줄래?")
 
     with col_res2:
         st.subheader("🧬 마음친구가 들려주는 이야기")
-        initial_diagnosis = "그림 속에 커다란 집이 있는 걸 보니, 네 마음은 지금 아주 따뜻하고 행복한가 봐! 작은 눈을 그린 건 부끄러움이 조금 많아서 그럴 수도 있겠다. 그치? 우리 조금 더 얘기해볼까?"
-        st.success(initial_diagnosis)
+        
+        # 탐지된 객체에 따라 동적으로 진단 멘트 생성
+        if extracted_data:
+            found_items = [d["찾은 것"] for d in extracted_data]
+            diagnosis_msg = f"와! 그림 속에서 {', '.join(found_items[:2])} 등을 찾았어. " \
+                            f"정말 따뜻한 느낌이 드는 그림이야! 이 그림을 그릴 때 어떤 기분이었어?"
+        else:
+            diagnosis_msg = "그림을 보고 있으니 마음이 편안해져. 어떤 이야기를 담고 있는지 더 듣고 싶어!"
+            
+        st.success(diagnosis_msg)
 
 # 5. 대화 세션
 if st.session_state.get('analysis_done'):
