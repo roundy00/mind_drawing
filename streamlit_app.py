@@ -49,11 +49,30 @@ def load_lottiefile(filepath: str):
     with open(filepath, "r", encoding="utf-8") as f:
         return json.load(f)
 
-# --- 1. 파일 로드 (파일명은 실제 저장하신 이름으로 맞춰주세요) ---
+# --- 파일 로드 (파일명은 실제 저장하신 이름으로 맞춰주세요) ---
 lottie_hello = load_lottiefile("Bath3_Hi emote.json")    # 인사하는 캐릭터
 lottie_loading = load_lottiefile("animal.json") # 분석 중 캐릭터
 lottie_success = load_lottiefile("Confetti.json") # 축하 효과
 
+# --- 팝업창(Dialog) 함수 정의 ---
+@st.dialog("마음친구가 분석 중이에요!")
+def show_analysis_popup():
+    st.write("그림 속 소중한 이야기들을 하나하나 살펴보고 있어요. 잠시만 기다려줘! ✨")
+    
+    # 팝업 안에 애니메이션 배치
+    if lottie_loading:
+        st_lottie(lottie_loading, speed=1, height=250, key="popup_loading")
+    
+    # 실제 분석 시간 동안 팝업 유지 (여기서 모델 예측을 실행해도 좋습니다)
+    progress_bar = st.progress(0)
+    for percent_complete in range(100):
+        time.sleep(0.03) # 시각적인 피드백을 위해 의도적인 지연
+        progress_bar.progress(percent_complete + 1)
+    
+    st.success("준비 완료! 이제 결과를 확인해볼까?")
+    if st.button("결과 보러 가기"):
+        st.rerun() # 팝업을 닫고 메인 화면을 새로고침하여 결과를 보여줌
+# ==============================================================================
 # 상단에 환영 인사와 함께 손 흔드는 캐릭터 배치
 st_lottie(lottie_hello, speed=1, loop=True, quality="low", height=200, key="hello")
 
@@ -106,29 +125,13 @@ with col_input2:
 
 # 4. 분석 결과 및 대화 섹션
 if analyze_btn and img_file:
+    # 팝업 실행!
+    show_analysis_popup()
     st.session_state['analysis_done'] = True
     st.divider()
 
     # 분석 중 애니메이션
     with st.empty(): # 공간을 확보했다가 분석 끝나면 교체
-        # --- 1. 팝업창(Dialog) 함수 정의 ---
-        @st.dialog("마음친구가 분석 중이에요!")
-        def show_analysis_popup():
-            st.write("그림 속 소중한 이야기들을 하나하나 살펴보고 있어요. 잠시만 기다려줘! ✨")
-            
-            # 팝업 안에 애니메이션 배치
-            if lottie_loading:
-                st_lottie(lottie_loading, speed=1, height=250, key="popup_loading")
-            
-            # 실제 분석 시간 동안 팝업 유지 (여기서 모델 예측을 실행해도 좋습니다)
-            progress_bar = st.progress(0)
-            for percent_complete in range(100):
-                time.sleep(0.03) # 시각적인 피드백을 위해 의도적인 지연
-                progress_bar.progress(percent_complete + 1)
-            
-            st.success("준비 완료! 이제 결과를 확인해볼까?")
-            if st.button("결과 보러 가기"):
-                st.rerun() # 팝업을 닫고 메인 화면을 새로고침하여 결과를 보여줌
         
         try:
             model = YOLO('best.pt') 
