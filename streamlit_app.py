@@ -81,8 +81,130 @@ if analyze_btn and img_file:
                 confidence = float(box.conf[0])
                 bbox = box.xyxy[0].tolist() # [xmin, ymin, xmax, ymax]
                 
-                print(f"탐지 성공: {label} (확률: {confidence:.2f})")
-                print(f"위치 좌표: {bbox}")
+                # --- [심리상담용 전처리] 레이블을 아이용 친근한 단어로 변경 ---
+                # 클래스매핑f 'models_loaded' not in st.session_state:
+    with st.spinner("AI 친구가 기지개를 켜며 준비하고 있어요... 잠시만 기다려줘! 💤"):
+        time.sleep(1.5)
+        st.session_state['models_loaded'] = True
+        st.session_state['analysis_done'] = False
+        st.session_state['chat_history'] = []
+
+# 3. 데이터 입력 섹션
+st.header("1. 너에 대해 알려줘! 🎈")
+col_input1, col_input2 = st.columns([1, 1])
+
+with col_input1:
+    st.subheader("🖼️ 네가 그린 멋진 그림을 보여줘")
+    img_file = st.file_uploader("그림 파일을 여기에 쏙 넣어줘!", type=["jpg", "png", "jpeg"], key="img")
+    if img_file:
+        image = Image.open(img_file)
+        st.image(image, use_container_width=True, caption="와! 정말 멋진 그림이야! ✨")
+
+with col_input2:
+    st.subheader("🧒 너에 대해 알려줘!")
+    child_age = st.slider("내 나이는 이만큼이야!", 5, 13, 7)
+    child_sex = st.radio("너는 남자니, 여자니?", ["남자", "여자"], horizontal=True)
+    
+    st.write("---")
+    analyze_btn = st.button("마음친구야, 내 그림 좀 봐줄래? 🚀", use_container_width=True)
+
+# 4. 분석 결과 및 대화 섹션
+if analyze_btn and img_file:
+    st.session_state['analysis_done'] = True
+    st.divider()
+    
+    def run_object_detection(image_path, model_path='best.pt'):
+        """
+        이미지 경로와 모델 경로를 받아 객체를 탐지하고 결과를 반환합니다.
+        """
+        # 1. 모델 로드 (다영님이 학습시킨 가중치 파일)
+        model = YOLO(model_path)
+        
+        # 2. 이미지 추론 (PIL 이미지나 경로 모두 가능)
+        results = model.predict(source=image_path, save=False, conf=0.25)
+        
+        # 3. 결과 해석 및 출력
+        for r in results:
+            # 탐지된 객체의 이름들 확인
+            names = r.names
+            for box in r.boxes:
+                class_id = int(box.cls[0])
+                label = names[class_id]
+                confidence = float(box.conf[0])
+                bbox = box.xyxy[0].tolist() # [xmin, ymin, xmax, ymax]
+                
+                # --- [심리상담용 전처리] 레이블을 아이용 친근한 단어로 변경 ---
+                # 클래스매핑
+                # 통합된 전체 클래스 매핑 (총 47종)
+                class_mapping = {
+                    # 나무 관련 (통합)
+                    "나무전체": 0, "나무": 0,
+                    "기둥": 1,
+                    "수관": 2,
+                    "가지": 3,
+                    "뿌리": 4,
+                    "나뭇잎": 5,
+                    "꽃": 6, # '꽃' 라벨 통합
+                    "열매": 7,
+                    "그네": 8,
+                    "새": 9,
+                    "다람쥐": 10,
+                    "구름": 11,
+                    "달": 12,
+                    "별": 13,
+                
+                    # 사람 관련 (남자/여자 공통 및 구분)
+                    "사람전체": 14,
+                    "머리": 15,
+                    "얼굴": 16,
+                    "눈": 17,
+                    "코": 18,
+                    "입": 19,
+                    "귀": 20,
+                    "남자머리카락": 21,
+                    "목": 22,
+                    "상체": 23,
+                    "팔": 24,
+                    "손": 25,
+                    "다리": 26,
+                    "발": 27,
+                    "단추": 28,
+                    "주머니": 29,
+                    "운동화": 30,
+                    "남자구두": 31,
+                    "여자머리카락": 32,
+                    "여자구두": 33,
+                
+                    # 집 관련 및 배경
+                    "집전체": 34,
+                    "지붕": 35,
+                    "집벽": 36,
+                    "문": 37,
+                    "창문": 38,
+                    "굴뚝": 39,
+                    "연기": 40,
+                    "울타리": 41,
+                    "길": 42,
+                    "연못": 43,
+                    "산": 44,
+                    "잔디": 45,
+                    "태양": 46
+                }
+                display_name = friendly_names.get(label, label)
+                
+                # 박스 크기(면적) 계산으로 '크기' 표현 자동화
+                bbox = box.xywh[0] # [x, y, w, h]
+                area = float(bbox[2] * bbox[3])
+                size_desc = "커다란" if area > 50000 else "귀여운" # 이미지 크기에 따라 조정 필요
+                
+                extracted_data.append({
+                    "찾은 것": display_name,
+                    "크기": f"{size_desc} {display_name}야!",
+                    "느낌": "정성 가득 그려졌어 ✨"
+                })
+        except Exception as e:
+            st.error(f"모델을 불러오는 중에 문제가 생겼어: {e}")
+            extracted_data = []
     
         return results
     
