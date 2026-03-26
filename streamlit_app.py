@@ -111,8 +111,24 @@ if analyze_btn and img_file:
 
     # 분석 중 애니메이션
     with st.empty(): # 공간을 확보했다가 분석 끝나면 교체
-        st_lottie(lottie_loading, speed=1, height=300, key="loading")
-        st.write("### 마음친구가 그림 속 이야기를 듣고 있어... 🤫")
+        # --- 1. 팝업창(Dialog) 함수 정의 ---
+        @st.dialog("마음친구가 분석 중이에요!")
+        def show_analysis_popup():
+            st.write("그림 속 소중한 이야기들을 하나하나 살펴보고 있어요. 잠시만 기다려줘! ✨")
+            
+            # 팝업 안에 애니메이션 배치
+            if lottie_loading:
+                st_lottie(lottie_loading, speed=1, height=250, key="popup_loading")
+            
+            # 실제 분석 시간 동안 팝업 유지 (여기서 모델 예측을 실행해도 좋습니다)
+            progress_bar = st.progress(0)
+            for percent_complete in range(100):
+                time.sleep(0.03) # 시각적인 피드백을 위해 의도적인 지연
+                progress_bar.progress(percent_complete + 1)
+            
+            st.success("준비 완료! 이제 결과를 확인해볼까?")
+            if st.button("결과 보러 가기"):
+                st.rerun() # 팝업을 닫고 메인 화면을 새로고침하여 결과를 보여줌
         
         try:
             model = YOLO('best.pt') 
