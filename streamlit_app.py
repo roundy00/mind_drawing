@@ -7,6 +7,11 @@ import pandas as pd
 from ultralytics import YOLO
 from streamlit_lottie import st_lottie
 import requests
+import json
+
+
+# 1. 페이지 설정
+st.set_page_config(page_title="마음 그리는 AI 친구", layout="wide")
 
 # ======================================================================
 st.markdown("""
@@ -36,8 +41,6 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 # ======================================================================
-# 1. 페이지 설정
-st.set_page_config(page_title="마음 그리는 AI 친구", layout="wide")
 
 # 애니메이션을 가져오는 함수
 def load_lottieurl(url: str):
