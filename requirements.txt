@@ -1,5 +1,6 @@
 # --- 핵심 프레임워크 ---
 streamlit
+streamlit-lottie
 
 # --- 이미지 및 데이터 처리 ---
 Pillow
