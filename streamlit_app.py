@@ -8,11 +8,9 @@ from ultralytics import YOLO  # YOLOv8 로드를 위해 필요합니다.
 # 1. 페이지 설정
 st.set_page_config(page_title="마음 그리는 AI 친구", layout="wide")
 
-# --- 추가: 모델 로드 함수 (캐싱을 통해 속도 향상) ---
+# 추가: 모델 로드 함수 (캐싱을 통해 속도 향상) ---
 @st.cache_resource
 def load_yolo_model():
-    # 다영님이 파인튜닝하신 모델 경로(예: 'best.pt')를 입력하세요.
-    # 테스트용이라면 'yolov8n.pt'를 사용하면 자동으로 다운로드됩니다.
     model = YOLO('best.pt') 
     return model
 
@@ -58,7 +56,7 @@ with col_input2:
     child_age = st.slider("내 나이는 이만큼이야!", 5, 13, 7)
     child_sex = st.radio("너는 남자니, 여자니?", ["남자", "여자"], horizontal=True)
     st.write("---")
-    analyze_btn = st.button("마음친구야, 내 그림 좀 봐줄래? 🚀", use_container_width=True)
+    analyze_btn = st.button("친구야, 내 그림 좀 봐줄래? 🚀", use_container_width=True)
 
 # 4. 분석 결과 섹션 (YOLO 모델 적용)
 if analyze_btn and img_file:
@@ -67,7 +65,7 @@ if analyze_btn and img_file:
     with st.spinner("그림 속 이야기를 찾아보고 있어요... 🔍"):
         # --- YOLO 추론 시작 ---
         model = st.session_state['model']
-        results = model.predict(image) # 업로드된 PIL 이미지 바로 사용
+        results = model(image, iou=0.5, conf=0.25) # 업로드된 PIL 이미지 바로 사용
         
         # 결과 데이터 정리
         detected_objects = []
