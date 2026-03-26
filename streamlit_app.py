@@ -4,6 +4,7 @@ import time
 import random
 import base64
 import pandas as pd
+from ultralytics import YOLO
 
 # 1. 페이지 설정
 st.set_page_config(page_title="마음 그리는 AI 친구", layout="wide")
@@ -59,6 +60,31 @@ with col_input2:
 if analyze_btn and img_file:
     st.session_state['analysis_done'] = True
     st.divider()
+    
+    def run_object_detection(image_path, model_path='best.pt'):
+        """
+        이미지 경로와 모델 경로를 받아 객체를 탐지하고 결과를 반환합니다.
+        """
+        # 1. 모델 로드 (다영님이 학습시킨 가중치 파일)
+        model = YOLO(model_path)
+        
+        # 2. 이미지 추론 (PIL 이미지나 경로 모두 가능)
+        results = model.predict(source=image_path, save=False, conf=0.25)
+        
+        # 3. 결과 해석 및 출력
+        for r in results:
+            # 탐지된 객체의 이름들 확인
+            names = r.names
+            for box in r.boxes:
+                class_id = int(box.cls[0])
+                label = names[class_id]
+                confidence = float(box.conf[0])
+                bbox = box.xyxy[0].tolist() # [xmin, ymin, xmax, ymax]
+                
+                print(f"탐지 성공: {label} (확률: {confidence:.2f})")
+                print(f"위치 좌표: {bbox}")
+    
+        return results
     
     st.header("2. 네 마음속에 이런 보물이 들어있구나! 💎")
     
