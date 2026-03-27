@@ -9,10 +9,13 @@ numpy>=1.23.0
 colorthief>=0.2.1
 
 # --- YOLO ---
-ultralytics>=8.0.0
+ultralytics==8.3.0
 
-# --- OpenCV: headless 버전만 (GUI 불필요, 충돌 방지) ---
+# --- OpenCV: headless만 ---
 opencv-python-headless>=4.7.0
+
+# --- YOLO 추적 알고리즘 의존성 ---
+lapx>=0.5.2
 
 # --- 오디오 분석 ---
 librosa>=0.10.0
