@@ -21,11 +21,11 @@ st.markdown("""
     <style>
     /* 전체 배경색을 따뜻한 미색으로 */
     .stApp {
-        background-color: #E8E7CD;
+        background-color: #E8E5E3;
     }
     /* 버튼을 둥글고 예쁜 핑크색으로 */
     div.stButton > button:first-child {
-        background-color: #EB534B;
+        background-color: #EAB0C9;
         color: white;
         border-radius: 30px;
         border: none;
