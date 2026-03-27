@@ -284,7 +284,12 @@ if analyze_btn and img_file:
         st.session_state['yolo_done'] = False
     show_analysis_popup(img_file)
 
-    
+if st.session_state.get('analysis_done') and st.session_state.get('extracted_data'):
+    extracted_data = st.session_state['extracted_data'] # 세션에서 데이터를 가져옴
+    found_items = st.session_state.get('found_items', [])
+    res_plotted = st.session_state.get('res_plotted')
+
+
 st.header("2. 네 마음속에 이런 보물이 들어있구나! 💎")
 
 col_res1, col_res2 = st.columns([2, 1])
