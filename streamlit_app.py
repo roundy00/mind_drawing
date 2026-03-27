@@ -21,11 +21,11 @@ st.markdown("""
     <style>
     /* 전체 배경색을 따뜻한 미색으로 */
     .stApp {
-        background-color: ##E8E7CD;
+        background-color: #E8E7CD;
     }
     /* 버튼을 둥글고 예쁜 핑크색으로 */
     div.stButton > button:first-child {
-        background-color: ##EAB0C9;
+        background-color: #EB534B;
         color: white;
         border-radius: 30px;
         border: none;
@@ -34,7 +34,7 @@ st.markdown("""
         transition: all 0.3s;
     }
     div.stButton > button:first-child:hover {
-        background-color: ##EBC76A;
+        background-color: #EBC76A;
         transform: scale(1.05); /* 마우스 올리면 살짝 커지는 효과 */
     }
     /* 카드 느낌의 박스 디자인 */
