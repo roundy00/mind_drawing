@@ -7,6 +7,7 @@ Pillow
 pandas
 numpy
 opencv-python-headless
+colorthief
 
 # --- 모델 및 AI (가중치 로드용) ---
 ultralytics
