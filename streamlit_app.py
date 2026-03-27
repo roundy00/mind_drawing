@@ -1,7 +1,9 @@
 import os
-# cv2가 libGL.so.1을 찾기 전에 headless 환경임을 미리 선언
+# cv2/ultralytics가 GUI 관련 라이브러리를 로드하지 않도록 사전 차단
 os.environ["OPENCV_IO_ENABLE_OPENEXR"] = "0"
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
+os.environ["DISPLAY"] = ""
+os.environ["MPLBACKEND"] = "Agg"
 
 import streamlit as st
 from PIL import Image
