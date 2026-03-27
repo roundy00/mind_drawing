@@ -94,10 +94,14 @@ def show_analysis_popup(img_file):
         )
         cols[i].caption(f"RGB{color}")
 
-    if st.button("분석 완료! 결과 보러 가기"):
-        st.session_state['dominant_color'] = dom_color
-        st.session_state['palette'] = palette
-        st.rerun()
+    # 컬럼을 3개로 나누어 가운데에 버튼 배치
+    col1, col2, col3 = st.columns([1, 2, 1]) 
+    
+    with col2:
+        if st.button("분석 완료! 결과 보러 가기", use_container_width=True):
+            # 결과 저장 및 페이지 전환 로직
+            st.session_state['analysis_done'] = True
+            st.rerun()
 # ==============================================================================
 # CSS 주입
 st.markdown("""
