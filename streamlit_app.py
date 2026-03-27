@@ -100,7 +100,7 @@ def show_analysis_popup(img_file):
         st.rerun()
 # ==============================================================================
 # 상단에 환영 인사와 함께 손 흔드는 캐릭터 배치
-st_lottie(lottie_hello, speed=1, loop=True, quality="low", height=200, key="hello")
+# st_lottie(lottie_hello, speed=1, loop=True, quality="low", height=200, key="hello")
 
 # 배너이미지 추가 (Base64 변환)
 def get_image_base64(path):
