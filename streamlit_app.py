@@ -95,8 +95,7 @@ def show_analysis_popup(img_file):
                 
                 # 결과 데이터 정리
                 extracted_data = []
-                found_items = []
-                friendly_names = {
+                class_mapping = {
                     # 나무 관련 (통합)
                     "나무전체": 0, "나무": 0,
                     "기둥": 1,
@@ -153,14 +152,22 @@ def show_analysis_popup(img_file):
                 
                 for r in results:
                     for box in r.boxes:
+                        # 정규화 좌표 추출
+                        x_center, y_center, w, h = box.xywhn[0].tolist()
                         cls_id = int(box.cls[0])
-                        display_name = friendly_names.get(cls_id, r.names[cls_id])
-                        found_items.append(display_name)
-                        extracted_data.append({"찾은 것": display_name, "크기": "소중한 조각", "느낌": "정성 가득 ✨"})
+                        cls_name = class_mapping.get(cls_id, r.names[cls_id]))
+
+                        # 심리 분석용 상세 데이터 저장
+                        extracted_data.append({
+                            "찾은 것": cls_name,
+                            "가로 위치": f"{round(x_center * 100)}%", # 좌우 위치
+                            "세로 위치": f"{round(y_center * 100)}%", # 상하 위치
+                            "전체 크기": f"{round(w * h * 100, 1)}%", # 면적 점유율
+                            "느낌": "정성 가득 ✨"
+                        })
                 
                 # 세션 상태 저장
                 st.session_state['extracted_data'] = extracted_data
-                st.session_state['found_items'] = found_items
                 st.session_state['res_plotted'] = results[0].plot()
                 st.session_state['yolo_done'] = True # 분석 완료 깃발
                 
@@ -175,17 +182,14 @@ def show_analysis_popup(img_file):
     if is_ready:
         st.success("분석이 완료되었어! 보물을 확인할 준비가 됐니?")
         st.balloons() # 완료 의미로 풍선 띄우기
-        # if lottie_success:
-        #     st_lottie(lottie_success, speed=1, loop=False, height=150, key="popup_success_ani")
 
-    st.write("---")
     # 버튼 배치
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         # yolo_done이 True일 때만 버튼이 활성화(disabled=False)됩니다.
         if st.button("보물 상자 열어보기 💎", use_container_width=True, disabled=not is_ready):
             st.session_state['analysis_done'] = True
-            st.rerun() # 이제 팝업을 닫고 결과 페이지(st.header 2번 파트)를 보여줍니다.
+            st.rerun() # 이제 팝업을 닫고 결과 페이지(st.header 2번 파트)를 보여주기
 # ==============================================================================
 # CSS 주입
 st.markdown("""
@@ -284,28 +288,32 @@ if analyze_btn and img_file:
         st.session_state['yolo_done'] = False
     show_analysis_popup(img_file)
 
-if st.session_state.get('analysis_done') and st.session_state.get('extracted_data'):
-    extracted_data = st.session_state['extracted_data'] # 세션에서 데이터를 가져옴
-    found_items = st.session_state.get('found_items', [])
+if st.session_state.get('analysis_done'):
+    st.header("2. 네 마음속에 이런 보물이 들어있구나! 💎")
+    
+    # 세션에서 데이터 안전하게 불러오기
+    extracted_data = st.session_state.get('extracted_data', [])
     res_plotted = st.session_state.get('res_plotted')
 
+    col1, col2 = st.columns([1.2, 1]) # 이미지 쪽을 조금 더 넓게
 
-st.header("2. 네 마음속에 이런 보물이 들어있구나! 💎")
-
-col1, col2 = st.columns(2)
-    
-with col1:
-    st.subheader("🎨 마음 지도로 그려본 너의 그림")
-    if res_plotted is not None:
-        st.image(res_plotted, caption="마음친구가 찾아낸 보물들이야!", use_container_width=True)
-        
-with col2:
-    st.subheader("🔍 찾아낸 마음 조각들")
-    if extracted_data:
-        df = pd.DataFrame(extracted_data)
-        st.table(df)
-    else:
-        st.info("아직 분석된 결과가 없어요.")
+    with col1:
+            st.subheader("🎨 마음 지도로 그려본 너의 그림")
+            if res_plotted is not None:
+                # YOLO 결과 이미지를 화면에 표시
+                st.image(res_plotted, caption="마음친구가 찾아낸 보물들이야!", use_container_width=True)
+            
+    with col2:
+        st.subheader("🔍 찾아낸 마음 조각들")
+        if extracted_data:
+            # 추출한 상세 위치 정보를 표로 시각화
+            df = pd.DataFrame(extracted_data)
+            st.table(df) # 혹은 st.dataframe(df)
+            
+            # 간단한 해석 팁 제공
+            with st.expander("💡 위치 정보로 보는 아이의 마음"):
+                st.write("- **가로 위치**: 50%보다 작으면 과거/내향성, 크면 미래/외향성을 의미하기도 해요.")
+                st.write("- **전체 크기**: 그림이 도화지에서 차지하는 비중이 클수록 자신감이 넘치는 상태일 수 있어요.")
     
 st.success(diagnosis_msg)
 
