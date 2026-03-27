@@ -155,7 +155,7 @@ def show_analysis_popup(img_file):
                         # 정규화 좌표 추출
                         x_center, y_center, w, h = box.xywhn[0].tolist()
                         cls_id = int(box.cls[0])
-                        cls_name = class_mapping.get(cls_id, r.names[cls_id]))
+                        cls_name = class_mapping.get(cls_id, r.names[cls_id])
 
                         # 심리 분석용 상세 데이터 저장
                         extracted_data.append({
