@@ -99,6 +99,45 @@ def show_analysis_popup(img_file):
         st.session_state['palette'] = palette
         st.rerun()
 # ==============================================================================
+# CSS 주입
+st.markdown("""
+    <style>
+    /* 1. 웹폰트 불러오기 */
+    @font-face {
+        font-family: 'OngleipParkDahyeon';
+        src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/2411-3@1.0/Ownglyph_ParkDaHyun.woff2') format('woff2');
+        font-weight: normal;
+        font-display: swap;
+    }
+
+    /* 2. 전체 요소에 폰트 적용 */
+    html, body, [class*="st-"] {
+        font-family: 'OngleipParkDahyeon', sans-serif !important;
+        font-size: 18px; /* 손글씨체는 약간 크게 설정하는 것이 가독성에 좋습니다 */
+    }
+
+    /* 3. 제목 스타일 강조 */
+    h1, h2, h3 {
+        font-family: 'OngleipParkDahyeon', sans-serif !important;
+        color: #5D5D5D;
+        margin-bottom: 1rem;
+    }
+
+    /* 기존 버튼 및 배경 스타일 유지 */
+    .stApp {
+        background-color: #FFF9F0;
+    }
+    div.stButton > button:first-child {
+        background-color: #FFB7B2;
+        color: white;
+        border-radius: 30px;
+        border: none;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+# =========================================================================
+
 # 상단에 환영 인사와 함께 손 흔드는 캐릭터 배치
 # st_lottie(lottie_hello, speed=1, loop=True, quality="low", height=200, key="hello")
 
