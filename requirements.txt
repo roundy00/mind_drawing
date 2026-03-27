@@ -1,25 +1,19 @@
 # --- 핵심 프레임워크 ---
-streamlit
-streamlit-lottie
+streamlit>=1.32.0
+streamlit-lottie>=0.0.5
 
 # --- 이미지 및 데이터 처리 ---
-Pillow
-pandas
-numpy
-colorthief
+Pillow>=9.0.0
+pandas>=1.5.0
+numpy>=1.23.0
+colorthief>=0.2.1
 
-# --- 모델 및 AI (가중치 로드용) ---
-ultralytics
-opencv-python-headless
-torch
-torchvision
-torchaudio
-transformers
+# --- YOLO ---
+ultralytics>=8.0.0
 
-# --- 오디오 분석 (Wav2Vec2 관련) ---
-librosa
-soundfile
+# --- OpenCV: headless 버전만 (GUI 불필요, 충돌 방지) ---
+opencv-python-headless>=4.7.0
 
-# --- (선택) RAG 및 벡터 DB 구축 시 필요 ---
-# langchain
-# chromadb
+# --- 오디오 분석 ---
+librosa>=0.10.0
+soundfile>=0.12.0
