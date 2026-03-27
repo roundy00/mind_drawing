@@ -70,49 +70,80 @@ def analyze_colors(image_file):
     
     return dominant_color, palette
 
-# --- 2. 팝업창 정의 ---
+# --- 팝업창 정의 ---
 @st.dialog("🎨 마음친구가 색깔 꾸러미를 분석하고 있어요!")
 def show_analysis_popup(img_file):
     st.write("그림 속에 담긴 예쁜 색깔들과 이야기들을 하나하나 찾아보고 있어요.")
     
-    # 애니메이션 표시
+    # 애니메이션 (고정)
     if lottie_loading:
         st_lottie(lottie_loading, height=200, key="color_popup")
     
-    # 1. 색채 분석 및 YOLO 분석 실행 (이미 분석이 안 된 경우에만)
+    # 분석이 아직 안 끝났다면 분석 함수 호출
     if not st.session_state.get('yolo_done', False):
         with st.spinner("마음친구가 집중하고 있어요... 🤫"):
-            # 색채 분석
-            dominant_color, palette = analyze_colors(img_file)
-            st.session_state['dominant_color'] = dominant_color
-            st.session_state['palette'] = palette
+            run_heavy_analysis(img_file) # 무거운 로직은 여기서 호출!
+            # 분석이 끝나면 자동으로 아래 코드로 넘어갑니다.
 
-    # 2. 결과 시각화 (팔레트)
+    # 분석 완료 후 팔레트 표시
     if st.session_state.get('palette'):
         st.subheader("🖼️ 이 그림에서 찾은 주요 색상들이에요")
         palette_cols = st.columns(len(st.session_state['palette']))
         for i, color in enumerate(st.session_state['palette']):
             palette_cols[i].markdown(
-                f'<div style="background-color: rgb{color}; height: 50px; border-radius: 10px; border: 1px solid #ddd;"></div>',
+                f'<div style="background-color: rgb{color}; height: 50px; border-radius: 10px;"></div>',
                 unsafe_allow_html=True
             )
 
     st.write("---")
-
-    # 3. 버튼 중앙 정렬 및 활성화/비활성화 제어
+    
+    # 버튼 중앙 정렬
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        # yolo_done이 True일 때만 disabled=False (클릭 가능)
         is_ready = st.session_state.get('yolo_done', False)
-        
         if st.button(
-            "분석 완료! 결과 보러 가기" if is_ready else "분석 중... 잠시만 기다려줘!", 
+            "분석 완료! 결과 보러 가기" if is_ready else "분석 중... ⏳", 
             use_container_width=True, 
-            disabled=not is_ready, # 분석 중일 땐 버튼 잠금
-            key="go_result_btn"
+            disabled=not is_ready,
+            key="final_result_btn"
         ):
             st.session_state['analysis_done'] = True
-            st.rerun()
+            st.rerun() # 여기서만 rerun하여 팝업을 닫고 결과 화면으로 이동
+
+# --------------실제 분석 담당 함수------------
+def run_heavy_analysis(img_file):
+    """실제 YOLO 및 ColorThief 분석을 수행하고 세션에 저장하는 함수"""
+    # 1. 색채 분석
+    dom_color, palette = analyze_colors(img_file)
+    st.session_state['dominant_color'] = dom_color
+    st.session_state['palette'] = palette
+    
+    # 2. YOLO 분석
+    try:
+        image = Image.open(img_file)
+        model = YOLO('best.pt') 
+        results = model.predict(source=image, save=False, conf=0.25)
+        
+        # 데이터 정제
+        extracted_data = []
+        found_items = []
+        friendly_names = {0: "나무", 1: "기둥", 2: "수관", 14: "사람", 34: "집", 46: "태양"}
+        
+        for r in results:
+            for box in r.boxes:
+                cls_id = int(box.cls[0])
+                display_name = friendly_names.get(cls_id, r.names[cls_id])
+                found_items.append(display_name)
+                extracted_data.append({"찾은 것": display_name, "크기": "소중한 조각", "느낌": "정성 가득 ✨"})
+        
+        # 결과 저장
+        st.session_state['extracted_data'] = extracted_data
+        st.session_state['found_items'] = found_items
+        st.session_state['res_plotted'] = results[0].plot()
+        st.session_state['yolo_done'] = True # 분석 완료 깃발!
+        
+    except Exception as e:
+        st.error(f"분석 중 에러가 났어요: {e}")
 # ==============================================================================
 # CSS 주입
 st.markdown("""
