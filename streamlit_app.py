@@ -9,6 +9,8 @@ from streamlit_lottie import st_lottie
 import requests
 import json
 import os
+from colorthief import ColorThief
+import io
 
 
 # 1. 페이지 설정
