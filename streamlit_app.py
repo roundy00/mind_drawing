@@ -86,45 +86,6 @@ def show_analysis_popup(img_file):
             dominant_color, palette = analyze_colors(img_file)
             st.session_state['dominant_color'] = dominant_color
             st.session_state['palette'] = palette
-            
-            # YOLO 분석 (PIL 이미지를 사용하여 분석)
-            try:
-                image = Image.open(img_file)
-                model = YOLO('best.pt') 
-                results = model.predict(source=image, save=False, conf=0.25)
-                
-                # 결과 저장을 위한 리스트
-                extracted_data = []
-                found_items = []
-                friendly_names = {
-                0: "나무", 1: "기둥", 2: "수관", 3: "가지", 4: "뿌리", 5: "나뭇잎",
-                6: "꽃", 7: "열매", 8: "그네", 9: "새", 10: "다람쥐",
-                11: "구름", 12: "달", 13: "별", 14: "사람", 15: "머리",
-                16: "얼굴", 17: "눈", 18: "코", 19: "입", 20: "귀",
-                # ... (모델 학습 시 설정한 인덱스에 맞춰 계속 추가)
-                34: "집", 35: "지붕", 37: "문", 38: "창문", 46: "태양"
-                }
-                
-                for r in results:
-                    for box in r.boxes:
-                        cls_id = int(box.cls[0])
-                        display_name = friendly_names.get(cls_id, r.names[cls_id])
-                        found_items.append(display_name)
-                        extracted_data.append({
-                            "찾은 것": display_name, 
-                            "크기": "소중한 조각", 
-                            "느낌": "정성 가득 ✨"
-                        })
-                
-                # 분석 결과 세션 저장
-                st.session_state['extracted_data'] = extracted_data
-                st.session_state['found_items'] = found_items
-                st.session_state['res_plotted'] = results[0].plot()
-                st.session_state['yolo_done'] = True # 분석 완료 표시!
-                st.rerun() # 버튼 상태 갱신을 위해 재실행
-                
-            except Exception as e:
-                st.error(f"분석 중 오류 발생: {e}")
 
     # 2. 결과 시각화 (팔레트)
     if st.session_state.get('palette'):
@@ -249,6 +210,44 @@ if analyze_btn and img_file:
     st.session_state['analysis_done'] = True
     st.divider()
 
+    # YOLO 분석 (PIL 이미지를 사용하여 분석)
+    try:
+        image = Image.open(img_file)
+        model = YOLO('best.pt') 
+        results = model.predict(source=image, save=False, conf=0.25)
+        
+        # 결과 저장을 위한 리스트
+        extracted_data = []
+        found_items = []
+        friendly_names = {
+        0: "나무", 1: "기둥", 2: "수관", 3: "가지", 4: "뿌리", 5: "나뭇잎",
+        6: "꽃", 7: "열매", 8: "그네", 9: "새", 10: "다람쥐",
+        11: "구름", 12: "달", 13: "별", 14: "사람", 15: "머리",
+        16: "얼굴", 17: "눈", 18: "코", 19: "입", 20: "귀",
+        # ... (모델 학습 시 설정한 인덱스에 맞춰 계속 추가)
+        34: "집", 35: "지붕", 37: "문", 38: "창문", 46: "태양"
+        }
+        
+        for r in results:
+            for box in r.boxes:
+                cls_id = int(box.cls[0])
+                display_name = friendly_names.get(cls_id, r.names[cls_id])
+                found_items.append(display_name)
+                extracted_data.append({
+                    "찾은 것": display_name, 
+                    "크기": "소중한 조각", 
+                    "느낌": "정성 가득 ✨"
+                })
+        
+        # 분석 결과 세션 저장
+        st.session_state['extracted_data'] = extracted_data
+        st.session_state['found_items'] = found_items
+        st.session_state['res_plotted'] = results[0].plot()
+        st.session_state['yolo_done'] = True # 분석 완료 표시!
+        st.rerun() # 버튼 상태 갱신을 위해 재실행
+        
+    except Exception as e:
+        st.error(f"분석 중 오류 발생: {e}")
     # 분석 완료 후 풍선 튀어나오기!
     st_lottie(lottie_success, speed=1, loop=False, height=300, key="success")
     st.balloons()
