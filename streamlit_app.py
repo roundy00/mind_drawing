@@ -40,7 +40,7 @@ st.markdown("""
         margin-bottom: 1rem;
     }
     .stApp {
-        background-color: #FFF9F0;
+        background-color: #f3ede9;
     }
     div.stButton > button:first-child {
         background-color: #EAB0C9;
