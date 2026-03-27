@@ -152,7 +152,7 @@ with col_input2:
 # 4. 분석 결과 및 대화 섹션
 if analyze_btn and img_file:
     # 팝업 실행!
-    show_analysis_popup()
+    show_analysis_popup(img_file)
     st.session_state['analysis_done'] = True
     st.divider()
 
