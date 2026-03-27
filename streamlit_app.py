@@ -71,79 +71,69 @@ def analyze_colors(image_file):
     return dominant_color, palette
 
 # --- 팝업창 정의 ---
-@st.dialog("🎨 마음친구가 색깔 꾸러미를 분석하고 있어요!")
+# --- 2. 팝업창 정의 (이 부분을 상단 함수 정의 구역에 넣으세요) ---
+@st.dialog("🎨 마음친구가 분석 중이에요!")
 def show_analysis_popup(img_file):
-    st.write("그림 속에 담긴 예쁜 색깔들과 이야기들을 하나하나 찾아보고 있어요.")
+    st.write("그림 속 이야기를 찾고 있어요. 잠시만 기다려줘! ✨")
     
-    # 애니메이션 (고정)
+    # 로딩 애니메이션 (파일 경로 확인 필요)
     if lottie_loading:
-        st_lottie(lottie_loading, height=200, key="color_popup")
-    
-    # 분석이 아직 안 끝났다면 분석 함수 호출
+        st_lottie(lottie_loading, height=200, key="popup_loading_ani")
+
+    # [핵심] 팝업 안에서 분석을 수행합니다.
     if not st.session_state.get('yolo_done', False):
         with st.spinner("마음친구가 집중하고 있어요... 🤫"):
-            run_heavy_analysis(img_file) # 무거운 로직은 여기서 호출!
-            # 분석이 끝나면 자동으로 아래 코드로 넘어갑니다.
+            try:
+                # 1. 색채 분석
+                dom_color, palette = analyze_colors(img_file)
+                st.session_state['dominant_color'] = dom_color
+                st.session_state['palette'] = palette
+                
+                # 2. YOLO 분석
+                image = Image.open(img_file)
+                model = YOLO('best.pt') 
+                results = model.predict(source=image, save=False, conf=0.25)
+                
+                # 결과 데이터 정리
+                extracted_data = []
+                found_items = []
+                friendly_names = {0: "나무", 1: "기둥", 2: "수관", 14: "사람", 34: "집", 46: "태양"} # 필요시 확장
+                
+                for r in results:
+                    for box in r.boxes:
+                        cls_id = int(box.cls[0])
+                        display_name = friendly_names.get(cls_id, r.names[cls_id])
+                        found_items.append(display_name)
+                        extracted_data.append({"찾은 것": display_name, "크기": "소중한 조각", "느낌": "정성 가득 ✨"})
+                
+                # 세션 상태 저장
+                st.session_state['extracted_data'] = extracted_data
+                st.session_state['found_items'] = found_items
+                st.session_state['res_plotted'] = results[0].plot()
+                st.session_state['yolo_done'] = True # 분석 완료 깃발
+                
+                # 분석 완료 후 UI를 즉시 업데이트하기 위해 내부 리런
+                st.rerun() 
+                
+            except Exception as e:
+                st.error(f"분석 중 에러: {e}")
 
-    # 분석 완료 후 팔레트 표시
-    if st.session_state.get('palette'):
-        st.subheader("🖼️ 이 그림에서 찾은 주요 색상들이에요")
-        palette_cols = st.columns(len(st.session_state['palette']))
-        for i, color in enumerate(st.session_state['palette']):
-            palette_cols[i].markdown(
-                f'<div style="background-color: rgb{color}; height: 50px; border-radius: 10px;"></div>',
-                unsafe_allow_html=True
-            )
+    # 분석 완료 시 연출 (풍선 및 성공 메시지)
+    is_ready = st.session_state.get('yolo_done', False)
+    if is_ready:
+        st.success("분석이 완료되었어! 보물을 확인할 준비가 됐니?")
+        st.balloons() # 완료 의미로 풍선 띄우기
+        if lottie_success:
+            st_lottie(lottie_success, speed=1, loop=False, height=150, key="popup_success_ani")
 
     st.write("---")
-    
-    # 버튼 중앙 정렬
+    # 버튼 배치
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        is_ready = st.session_state.get('yolo_done', False)
-        if st.button(
-            "분석 완료! 결과 보러 가기" if is_ready else "분석 중... ⏳", 
-            use_container_width=True, 
-            disabled=not is_ready,
-            key="final_result_btn"
-        ):
+        # yolo_done이 True일 때만 버튼이 활성화(disabled=False)됩니다.
+        if st.button("보물 상자 열어보기 💎", use_container_width=True, disabled=not is_ready):
             st.session_state['analysis_done'] = True
-            st.rerun() # 여기서만 rerun하여 팝업을 닫고 결과 화면으로 이동
-
-# --------------실제 분석 담당 함수------------
-def run_heavy_analysis(img_file):
-    """실제 YOLO 및 ColorThief 분석을 수행하고 세션에 저장하는 함수"""
-    # 1. 색채 분석
-    dom_color, palette = analyze_colors(img_file)
-    st.session_state['dominant_color'] = dom_color
-    st.session_state['palette'] = palette
-    
-    # 2. YOLO 분석
-    try:
-        image = Image.open(img_file)
-        model = YOLO('best.pt') 
-        results = model.predict(source=image, save=False, conf=0.25)
-        
-        # 데이터 정제
-        extracted_data = []
-        found_items = []
-        friendly_names = {0: "나무", 1: "기둥", 2: "수관", 14: "사람", 34: "집", 46: "태양"}
-        
-        for r in results:
-            for box in r.boxes:
-                cls_id = int(box.cls[0])
-                display_name = friendly_names.get(cls_id, r.names[cls_id])
-                found_items.append(display_name)
-                extracted_data.append({"찾은 것": display_name, "크기": "소중한 조각", "느낌": "정성 가득 ✨"})
-        
-        # 결과 저장
-        st.session_state['extracted_data'] = extracted_data
-        st.session_state['found_items'] = found_items
-        st.session_state['res_plotted'] = results[0].plot()
-        st.session_state['yolo_done'] = True # 분석 완료 깃발!
-        
-    except Exception as e:
-        st.error(f"분석 중 에러가 났어요: {e}")
+            st.rerun() # 이제 팝업을 닫고 결과 페이지(st.header 2번 파트)를 보여줍니다.
 # ==============================================================================
 # CSS 주입
 st.markdown("""
@@ -236,52 +226,12 @@ with col_input2:
 
 # 4. 분석 결과 및 대화 섹션
 if analyze_btn and img_file:
-    # 팝업 실행!
+    # 버튼 클릭 시 팝업만 딱 띄웁니다.
+    # 분석 상태가 아니라면 초기화
+    if not st.session_state.get('yolo_done', False):
+        st.session_state['yolo_done'] = False
     show_analysis_popup(img_file)
-    st.session_state['analysis_done'] = True
-    st.divider()
 
-    # YOLO 분석 (PIL 이미지를 사용하여 분석)
-    try:
-        image = Image.open(img_file)
-        model = YOLO('best.pt') 
-        results = model.predict(source=image, save=False, conf=0.25)
-        
-        # 결과 저장을 위한 리스트
-        extracted_data = []
-        found_items = []
-        friendly_names = {
-        0: "나무", 1: "기둥", 2: "수관", 3: "가지", 4: "뿌리", 5: "나뭇잎",
-        6: "꽃", 7: "열매", 8: "그네", 9: "새", 10: "다람쥐",
-        11: "구름", 12: "달", 13: "별", 14: "사람", 15: "머리",
-        16: "얼굴", 17: "눈", 18: "코", 19: "입", 20: "귀",
-        # ... (모델 학습 시 설정한 인덱스에 맞춰 계속 추가)
-        34: "집", 35: "지붕", 37: "문", 38: "창문", 46: "태양"
-        }
-        
-        for r in results:
-            for box in r.boxes:
-                cls_id = int(box.cls[0])
-                display_name = friendly_names.get(cls_id, r.names[cls_id])
-                found_items.append(display_name)
-                extracted_data.append({
-                    "찾은 것": display_name, 
-                    "크기": "소중한 조각", 
-                    "느낌": "정성 가득 ✨"
-                })
-        
-        # 분석 결과 세션 저장
-        st.session_state['extracted_data'] = extracted_data
-        st.session_state['found_items'] = found_items
-        st.session_state['res_plotted'] = results[0].plot()
-        st.session_state['yolo_done'] = True # 분석 완료 표시!
-        st.rerun() # 버튼 상태 갱신을 위해 재실행
-        
-    except Exception as e:
-        st.error(f"분석 중 오류 발생: {e}")
-    # 분석 완료 후 풍선 튀어나오기!
-    st_lottie(lottie_success, speed=1, loop=False, height=300, key="success")
-    st.balloons()
     
     st.header("2. 네 마음속에 이런 보물이 들어있구나! 💎")
     
