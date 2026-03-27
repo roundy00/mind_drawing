@@ -34,7 +34,7 @@ st.markdown("""
         transition: all 0.3s;
     }
     div.stButton > button:first-child:hover {
-        background-color: ##C7EB75;
+        background-color: ###EBC76A;
         transform: scale(1.05); /* 마우스 올리면 살짝 커지는 효과 */
     }
     /* 카드 느낌의 박스 디자인 */
