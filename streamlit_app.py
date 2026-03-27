@@ -292,31 +292,22 @@ if st.session_state.get('analysis_done') and st.session_state.get('extracted_dat
 
 st.header("2. 네 마음속에 이런 보물이 들어있구나! 💎")
 
-col_res1, col_res2 = st.columns([2, 1])
-with col_res1:
-    st.subheader("🎨 그림 속에서 찾은 이야기들")
-    if extracted_data:
-        st.table(pd.DataFrame(extracted_data))
-        # 분석 결과 이미지 (Bounding Box 포함)
-        res_plotted = results[0].plot() # BGR 형태
-        st.image(res_plotted, channels="BGR", use_container_width=True, caption="마음친구가 분석한 그림이야!")
-    else:
-        st.info("그림 속에서 아직 이야기를 찾지 못했어. 조금 더 크게 그려볼까?")
-
-with col_res2:
-    st.subheader("🧬 마음친구가 들려주는 이야기")
+col1, col2 = st.columns(2)
     
-    # TypeError 방지를 위해 found_items가 있을 때만 join 실행
-    if found_items:
-        # 중복 제거 후 최대 2개만 노출
-        unique_items = list(dict.fromkeys(found_items))
-        items_str = ", ".join(unique_items[:2])
-        diagnosis_msg = f"와! 그림 속에서 **{items_str}** 등을 찾았어. " \
-                        f"정말 따뜻한 느낌이 드는 그림이야! 이 그림을 그릴 때 어떤 기분이었어?"
-    else:
-        diagnosis_msg = "그림을 보고 있으니 마음이 편안해져. 어떤 이야기를 담고 있는지 더 듣고 싶어!"
+with col1:
+    st.subheader("🎨 마음 지도로 그려본 너의 그림")
+    if res_plotted is not None:
+        st.image(res_plotted, caption="마음친구가 찾아낸 보물들이야!", use_container_width=True)
         
-    st.success(diagnosis_msg)
+with col2:
+    st.subheader("🔍 찾아낸 마음 조각들")
+    if extracted_data:
+        df = pd.DataFrame(extracted_data)
+        st.table(df)
+    else:
+        st.info("아직 분석된 결과가 없어요.")
+    
+st.success(diagnosis_msg)
 
 # 5. 대화 세션
 if st.session_state.get('analysis_done'):
