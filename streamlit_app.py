@@ -175,8 +175,8 @@ def show_analysis_popup(img_file):
     if is_ready:
         st.success("분석이 완료되었어! 보물을 확인할 준비가 됐니?")
         st.balloons() # 완료 의미로 풍선 띄우기
-        if lottie_success:
-            st_lottie(lottie_success, speed=1, loop=False, height=150, key="popup_success_ani")
+        # if lottie_success:
+        #     st_lottie(lottie_success, speed=1, loop=False, height=150, key="popup_success_ani")
 
     st.write("---")
     # 버튼 배치
