@@ -25,7 +25,7 @@ st.markdown("""
     }
     /* 버튼을 둥글고 예쁜 핑크색으로 */
     div.stButton > button:first-child {
-        background-color: ##C7EB75;
+        background-color: ##EAB0C9;
         color: white;
         border-radius: 30px;
         border: none;
@@ -34,7 +34,7 @@ st.markdown("""
         transition: all 0.3s;
     }
     div.stButton > button:first-child:hover {
-        background-color: ###EBC76A;
+        background-color: ##EBC76A;
         transform: scale(1.05); /* 마우스 올리면 살짝 커지는 효과 */
     }
     /* 카드 느낌의 박스 디자인 */
