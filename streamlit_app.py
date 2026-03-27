@@ -70,36 +70,86 @@ def analyze_colors(image_file):
     
     return dominant_color, palette
 
-# --- 팝업(Dialog) 내부에서 활용 ---
-@st.dialog("마음친구가 색깔 꾸러미를 분석하고 있어요! 🎨")
+# --- 2. 팝업창 정의 ---
+@st.dialog("🎨 마음친구가 색깔 꾸러미를 분석하고 있어요!")
 def show_analysis_popup(img_file):
-    st.write("아이가 어떤 색으로 마음을 표현했는지 살펴보고 있어요.")
+    st.write("그림 속에 담긴 예쁜 색깔들과 이야기들을 하나하나 찾아보고 있어요.")
     
     # 애니메이션 표시
     if lottie_loading:
-        st_lottie(lottie_loading, height=200, key="color_loading")
-        
-    # 색채 및 YOLO 분석 수행
-    dom_color, palette = analyze_colors(img_file)
+        st_lottie(lottie_loading, height=200, key="color_popup")
     
-    # 결과 보여주기
-    st.subheader("🖼️ 이 그림의 주요 색상들이에요")
-    
-    # 컬러 팔레트를 가로로 예쁘게 보여주기
-    cols = st.columns(5)
-    for i, color in enumerate(palette):
-        cols[i].markdown(
-            f'<div style="background-color: rgb{color}; height: 50px; border-radius: 10px;"></div>',
-            unsafe_allow_html=True
-        )
-        cols[i].caption(f"RGB{color}")
+    # 1. 색채 분석 및 YOLO 분석 실행 (이미 분석이 안 된 경우에만)
+    if not st.session_state.get('yolo_done', False):
+        with st.spinner("마음친구가 집중하고 있어요... 🤫"):
+            # 색채 분석
+            dominant_color, palette = analyze_colors(img_file)
+            st.session_state['dominant_color'] = dominant_color
+            st.session_state['palette'] = palette
+            
+            # YOLO 분석 (PIL 이미지를 사용하여 분석)
+            try:
+                image = Image.open(img_file)
+                model = YOLO('best.pt') 
+                results = model.predict(source=image, save=False, conf=0.25)
+                
+                # 결과 저장을 위한 리스트
+                extracted_data = []
+                found_items = []
+                friendly_names = {
+                0: "나무", 1: "기둥", 2: "수관", 3: "가지", 4: "뿌리", 5: "나뭇잎",
+                6: "꽃", 7: "열매", 8: "그네", 9: "새", 10: "다람쥐",
+                11: "구름", 12: "달", 13: "별", 14: "사람", 15: "머리",
+                16: "얼굴", 17: "눈", 18: "코", 19: "입", 20: "귀",
+                # ... (모델 학습 시 설정한 인덱스에 맞춰 계속 추가)
+                34: "집", 35: "지붕", 37: "문", 38: "창문", 46: "태양"
+                }
+                
+                for r in results:
+                    for box in r.boxes:
+                        cls_id = int(box.cls[0])
+                        display_name = friendly_names.get(cls_id, r.names[cls_id])
+                        found_items.append(display_name)
+                        extracted_data.append({
+                            "찾은 것": display_name, 
+                            "크기": "소중한 조각", 
+                            "느낌": "정성 가득 ✨"
+                        })
+                
+                # 분석 결과 세션 저장
+                st.session_state['extracted_data'] = extracted_data
+                st.session_state['found_items'] = found_items
+                st.session_state['res_plotted'] = results[0].plot()
+                st.session_state['yolo_done'] = True # 분석 완료 표시!
+                st.rerun() # 버튼 상태 갱신을 위해 재실행
+                
+            except Exception as e:
+                st.error(f"분석 중 오류 발생: {e}")
 
-    # 컬럼을 3개로 나누어 가운데에 버튼 배치
-    col1, col2, col3 = st.columns([1, 2, 1]) 
-    
+    # 2. 결과 시각화 (팔레트)
+    if st.session_state.get('palette'):
+        st.subheader("🖼️ 이 그림에서 찾은 주요 색상들이에요")
+        palette_cols = st.columns(len(st.session_state['palette']))
+        for i, color in enumerate(st.session_state['palette']):
+            palette_cols[i].markdown(
+                f'<div style="background-color: rgb{color}; height: 50px; border-radius: 10px; border: 1px solid #ddd;"></div>',
+                unsafe_allow_html=True
+            )
+
+    st.write("---")
+
+    # 3. 버튼 중앙 정렬 및 활성화/비활성화 제어
+    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("분석 완료! 결과 보러 가기", use_container_width=True):
-            # 결과 저장 및 페이지 전환 로직
+        # yolo_done이 True일 때만 disabled=False (클릭 가능)
+        is_ready = st.session_state.get('yolo_done', False)
+        
+        if st.button(
+            "분석 완료! 결과 보러 가기" if is_ready else "분석 중... 잠시만 기다려줘!", 
+            use_container_width=True, 
+            disabled=not is_ready, # 분석 중일 땐 버튼 잠금
+            key="go_result_btn"
+        ):
             st.session_state['analysis_done'] = True
             st.rerun()
 # ==============================================================================
@@ -199,55 +249,7 @@ if analyze_btn and img_file:
     st.session_state['analysis_done'] = True
     st.divider()
 
-    # 분석 중 애니메이션
-    with st.empty(): # 공간을 확보했다가 분석 끝나면 교체
-        
-        try:
-            model = YOLO('best.pt') 
-            # PIL 이미지를 모델에 바로 전달
-            results = model.predict(source=image, save=False, conf=0.25)
-            
-            extracted_data = []
-            found_items = [] # 진단 메시지용 리스트 초기화
-            
-            # 클래스 번호를 다정한 한국어 이름으로 바꾸는 매핑
-            # 모델의 'names' 인덱스 순서와 일치해야 합니다.
-            friendly_names = {
-                0: "나무", 1: "기둥", 2: "수관", 3: "가지", 4: "뿌리", 5: "나뭇잎",
-                6: "꽃", 7: "열매", 8: "그네", 9: "새", 10: "다람쥐",
-                11: "구름", 12: "달", 13: "별", 14: "사람", 15: "머리",
-                16: "얼굴", 17: "눈", 18: "코", 19: "입", 20: "귀",
-                # ... (모델 학습 시 설정한 인덱스에 맞춰 계속 추가)
-                34: "집", 35: "지붕", 37: "문", 38: "창문", 46: "태양"
-            }
-            
-            for r in results:
-                for box in r.boxes:
-                    cls_id = int(box.cls[0])
-                    # 매핑에 있으면 한국어로, 없으면 모델 기본 이름 사용
-                    display_name = friendly_names.get(cls_id, r.names[cls_id])
-                    
-                    # 면적 계산을 통한 크기 묘사
-                    bbox = box.xywh[0] # [x, y, w, h]
-                    area = float(bbox[2] * bbox[3])
-                    size_desc = "커다란" if area > (image.size[0] * image.size[1] * 0.2) else "귀여운"
-                    
-                    found_items.append(display_name)
-                    extracted_data.append({
-                        "찾은 것": display_name,
-                        "크기": f"{size_desc} {display_name}야!",
-                        "느낌": "정성 가득 그려졌어 ✨"
-                    })
-
-                    time.sleep(3) # 분석 느낌을 주기 위한 잠깐의 대기
-                    st.empty() # 애니메이션 지우기
-                    
-        except Exception as e:
-            st.error(f"모델 분석 중에 문제가 생겼어: {e}")
-            extracted_data = []
-            found_items = []
-
-    # 분석 완료 후 하트 튀어나오기!
+    # 분석 완료 후 풍선 튀어나오기!
     st_lottie(lottie_success, speed=1, loop=False, height=300, key="success")
     st.balloons()
     
