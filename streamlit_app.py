@@ -186,39 +186,39 @@ def build_llm_prompt(color_result: dict, yolo_result: dict,
 @st.dialog("🎨 마음친구가 분석 중이에요!")
 def show_analysis_popup(img_file):
 
+    # ── 아직 분석 전: 진행바 표시하며 분석 수행 ──
     if not st.session_state.get("analysis_ready", False):
 
-        # ── 진행 상황 UI 요소 ──
-        status_text = st.empty()
+        status_text  = st.empty()
         progress_bar = st.progress(0)
         detail_text  = st.empty()
 
         try:
-            # STEP 1: 색채 분석 (0~40%)
+            # STEP 1: 색채 분석 (0 → 40%)
             status_text.markdown("**🎨 1단계: 그림 속 색깔을 읽고 있어요...**")
             detail_text.caption("그림에서 가장 많이 쓰인 색을 찾는 중")
             for pct in range(0, 41, 5):
                 progress_bar.progress(pct)
-                time.sleep(0.05)
+                time.sleep(0.04)
 
             color_result = analyze_colors(img_file)
             st.session_state["color_result"] = color_result
             progress_bar.progress(40)
             detail_text.caption(f"✅ 주요 색상 {color_result['dominant_color']['hex']} 발견!")
 
-            # STEP 2: YOLO 모델 로드 (40~60%)
+            # STEP 2: YOLO 추론 (40 → 80%)
             status_text.markdown("**🤖 2단계: AI 눈을 켜는 중이에요...**")
-            detail_text.caption("그림 분석 모델을 불러오는 중 (시간이 좀 걸려요)")
-            progress_bar.progress(50)
+            detail_text.caption("그림 분석 모델을 불러오는 중 (시간이 좀 걸려요 ⏳)")
+            progress_bar.progress(45)
 
-            yolo_result = run_yolo(img_file)   # 가장 오래 걸리는 단계
+            yolo_result = run_yolo(img_file)
             st.session_state["yolo_result"] = yolo_result
             progress_bar.progress(80)
 
             found_count = len(yolo_result["objects"])
             detail_text.caption(f"✅ {found_count}개의 마음 조각을 찾았어요!")
 
-            # STEP 3: LLM 프롬프트 생성 (80~100%)
+            # STEP 3: 프롬프트 조합 (80 → 100%)
             status_text.markdown("**📝 3단계: 마음 이야기를 정리하는 중이에요...**")
             detail_text.caption("분석 결과를 정리하는 중")
             for pct in range(80, 101, 5):
@@ -231,36 +231,30 @@ def show_analysis_popup(img_file):
                 st.session_state.get("child_age", 7),
                 st.session_state.get("child_sex", "남자"),
             )
-            st.session_state["llm_prompt"] = llm_prompt
+            st.session_state["llm_prompt"]     = llm_prompt
             st.session_state["analysis_ready"] = True
 
-            # 완료 표시
-            status_text.markdown("**✨ 분석 완료!**")
+            # 완료 메시지로 교체 (rerun 없이 그 자리에서 업데이트)
+            status_text.markdown("**✨ 분석 완료! 아래 버튼을 눌러줘 💎**")
             detail_text.empty()
             progress_bar.progress(100)
-            st.rerun()
+            st.balloons()
 
         except Exception as e:
             progress_bar.empty()
             status_text.empty()
             detail_text.empty()
             st.error(f"분석 중 에러가 발생했어요: {e}")
-            st.exception(e)   # 상세 traceback 표시 (디버깅용)
+            st.exception(e)
             return
 
+    # ── 분석 완료 후 버튼만 표시 ──
     if st.session_state.get("analysis_ready", False):
-        st.success("분석이 완료됐어! 보물을 확인할 준비가 됐니? 🎉")
-        st.balloons()
-
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        if st.button(
-            "보물 상자 열어보기 💎",
-            use_container_width=True,
-            disabled=not st.session_state.get("analysis_ready", False),
-        ):
-            st.session_state["analysis_done"] = True
-            st.rerun()
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            if st.button("보물 상자 열어보기 💎", use_container_width=True):
+                st.session_state["analysis_done"] = True
+                st.rerun()   # 팝업 닫고 메인 페이지 결과 섹션 렌더
 
 
 # ============================================================
