@@ -25,7 +25,7 @@ st.markdown("""
     }
     /* 버튼을 둥글고 예쁜 핑크색으로 */
     div.stButton > button:first-child {
-        background-color: #FFB7B2;
+        background-color: ##C7EB75;
         color: white;
         border-radius: 30px;
         border: none;
