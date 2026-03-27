@@ -163,7 +163,7 @@ def show_analysis_popup(img_file):
                             "가로 위치": f"{round(x_center * 100)}%", # 좌우 위치
                             "세로 위치": f"{round(y_center * 100)}%", # 상하 위치
                             "전체 크기": f"{round(w * h * 100, 1)}%", # 면적 점유율
-                            "느낌": "정성 가득 ✨"
+                            "색깔": "(작업중) ✨"
                         })
                 
                 # 세션 상태 저장
