@@ -9,6 +9,7 @@ import base64
 import io
 import time
 
+import openai
 import streamlit as st
 from PIL import Image
 import pandas as pd
@@ -178,7 +179,6 @@ def build_conversation_queue(yolo_result: dict) -> list[dict]:
 # ============================================================
 @st.cache_resource
 def get_openai_client():
-    import openai
     return openai.OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 
