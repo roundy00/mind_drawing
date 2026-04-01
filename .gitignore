@@ -1,0 +1,76 @@
+# =========================
+# Streamlit Specific
+# =========================
+# 보안을 위해 API 키와 비밀번호가 포함된 secrets 파일은 반드시 제외해야 합니다.
+.streamlit/secrets.toml
+
+# =========================
+# Python
+# =========================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# =========================
+# Virtual Environments
+# =========================
+venv/
+env/
+.venv/
+.env/
+env.bak/
+venv.bak/
+
+# =========================
+# IDEs and Editors
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =========================
+# OS Generated Files
+# =========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =========================
+# Data & Logs (선택 사항)
+# =========================
+# 데이터 파일이나 로그를 깃허브에 올리고 싶지 않다면 주석(#)을 해제하세요.
+*.csv
+*.json
+*.xlsx
+*.db
+*.sqlite3
+*.log
