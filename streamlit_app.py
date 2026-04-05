@@ -144,9 +144,9 @@ st.markdown("""
 # ============================================================
 VOICE_GUIDE_HTML = """
 <div class="voice-guide-box">
-  <div class="step"><span class="step-icon">🎙️</span><span><b>녹음 버튼</b>을 눌러 녹음을 시작해주세요.</span></div>
-  <div class="step"><span class="step-icon">⏹️</span><span>말씀이 끝나면 <b>녹음 정지 버튼</b>을 눌러 인식된 텍스트를 확인해주세요.</span></div>
-  <div class="step"><span class="step-icon">🔁</span><span>다시 녹음하려면 <b>녹음 버튼을 다시 눌러</b> 녹음을 시작한 후 정지하면 돼요.</span></div>
+  <div class="step"><span class="step-icon"></span><span>아래 <b>🎙️ 버튼</b>을 눌러 녹음을 시작해주세요.</span></div>
+  <div class="step"><span class="step-icon"></span><span>말이 끝나면 <b>빨간 🔴 버튼</b>을 눌러 멈추면 인식된 텍스트를 확인할 수 있어요.</span></div>
+  <div class="step"><span class="step-icon"></span><span>다시 녹음하려면 <b>🎙️ 버튼을 다시 눌러</b> 시작한 후 빨간 🔴 버튼으로 멈추면 돼요.</span></div>
 </div>
 """
 
@@ -228,6 +228,10 @@ def run_yolo(image_file):
             x_c, y_c, w, h = box.xywhn[0].tolist()
             cls_id     = int(box.cls[0])
             confidence = float(box.conf[0])
+
+            # threshold
+            if confidence < 0.6: continue
+
             cls_name   = YOLO_CLASS_NAMES.get(cls_id, r.names.get(cls_id, f"class_{cls_id}"))
             area_pct   = round(w * h * 100, 2)
             col = "왼쪽" if x_c < 0.33 else ("오른쪽" if x_c > 0.66 else "중앙")
@@ -265,12 +269,18 @@ YOLO_VERIFY_SYSTEM = """
 - 아동의 설명을 최우선 기준으로 삼을 것
 - 설명이 짧거나 불완전해도, 설명에 없다는 이유만으로 오탐 처리 금지
 - 팔, 다리, 손, 발, 눈, 코, 입, 귀, 머리카락, 목 등 신체 세부 부위는
-  사람 전체가 탐지된 경우 오탐으로 처리하지 말 것 (당연히 존재하는 구성요소)
-- 집벽, 지붕, 문, 창문, 굴뚝 등 집 구성 요소도 집 전체가 탐지된 경우
-  오탐으로 처리하지 말 것
-- 나무기둥, 수관, 가지, 뿌리, 나뭇잎 등 나무 구성 요소도 동일하게 처리
-- 설명과 명확히 모순되는 경우에만 오탐으로 표시
-  예) 설명에 "집이 없어요"라고 했는데 집전체가 탐지된 경우
+  설명에 사람 관련 내용이 조금이라도 있으면 오탐으로 처리하지 말 것.
+  '사람전체'가 탐지되지 않아도 신체 부위만으로 사람이 존재한다고 판단할 수 있음.
+- 집벽, 지붕, 문, 창문, 굴뚝 등 집 구성 요소는
+  설명에 집과 관련된 내용(예: 집, 집에서, 집으로, 지붕, 문 등)이
+  조금이라도 언급되었다면 오탐으로 처리하지 말 것.
+  '집전체'가 탐지되지 않아도 구성 요소만으로 집이 존재한다고 판단할 수 있음.
+- 나무기둥, 수관, 가지, 뿌리, 나뭇잎 등 나무 구성 요소는
+  설명에 나무 관련 내용이 조금이라도 있으면 오탐으로 처리하지 말 것.
+  '나무전체'가 탐지되지 않아도 구성 요소만으로 나무가 존재한다고 판단할 수 있음.
+- 오탐으로 처리하는 기준은 오직 하나:
+  설명이 해당 요소의 존재를 명확히 부정할 때만
+  예) "집이 없어요", "나무를 그리지 않았어요", "사람은 없어요"
 - 반드시 JSON만 반환:
 {
   "verified_objects": [유효하다고 판단된 객체 name 목록],
@@ -1127,29 +1137,28 @@ def process_answer(
 # ============================================================
 def init_state():
     defaults = {
-        "models_loaded":         False,
-        "analysis_done":         False,
-        "analysis_ready":        False,
-        "color_result":          {},
-        "yolo_result":           {},
-        "image_base64":          None,
-        "uploaded_img":          None,
-        "child_age":             7,
-        "child_sex":             "남자",
-        "app_stage":             "upload",
-        "conv_queue":            [],
-        "current_group_idx":     0,
-        "current_q_idx":         0,
-        "current_question":      "",
-        "report":                None,
-        "drawing_description":   "",
-        "yolo_verification":     {},
-        "description_submitted": False,
-        "stt_description_draft": "",
-        # 음성 탭 상태: 인식 텍스트 없이 진행 확인 팝업용
+        "models_loaded":           False,
+        "analysis_done":           False,
+        "analysis_ready":          False,
+        "color_result":            {},
+        "yolo_result":             {},
+        "image_base64":            None,
+        "uploaded_img":            None,
+        "child_age":               7,
+        "child_sex":               "남자",
+        "app_stage":               "upload",
+        "conv_queue":              [],
+        "current_group_idx":       0,
+        "current_q_idx":           0,
+        "current_question":        "",
+        "report":                  None,
+        "drawing_description":     "",
+        "yolo_verification":       {},
+        "description_submitted":   False,
+        "stt_description_draft":   "",
         "desc_voice_confirm_pending": False,
-        "chat_voice_confirm_pending": False,
-        "chat_voice_confirm_key":     None,
+        # ✅ 추가: JSON 불러오기 여부
+        "report_loaded_from_json": False,
     }
     for k, v in defaults.items():
         if k not in st.session_state:
@@ -1268,7 +1277,7 @@ def show_desc_voice_confirm_dialog():
         "정말 이대로 진행할까요?",
         icon="⚠️",
     )
-    st.caption("💡 다시 녹음하려면 '취소'를 누른 뒤 녹음 버튼을 다시 눌러 시작해주세요.")
+    st.caption("💡 다시 녹음하려면 '취소'를 누른 뒤 🎙️ 버튼을 다시 눌러 시작해주세요.")
     col_cancel, col_ok = st.columns([1, 1])
     with col_cancel:
         if st.button("취소 — 다시 녹음할게요", width='stretch', key="desc_voice_confirm_cancel"):
@@ -1283,32 +1292,6 @@ def show_desc_voice_confirm_dialog():
             st.session_state["app_stage"]                  = "result"
             st.rerun()
 
-
-# ============================================================
-# 인식 텍스트 없이 진행 확인 다이얼로그 (대화용)
-# ============================================================
-@st.dialog("🎤 음성 인식 결과가 없어요")
-def show_chat_voice_confirm_dialog():
-    st.warning(
-        "아직 인식된 텍스트가 없어요!\n\n"
-        "이대로 진행하면 **이 질문을 건너뛰게** 돼요.\n"
-        "정말 이대로 진행할까요?",
-        icon="⚠️",
-    )
-    st.caption("💡 다시 녹음하려면 '취소'를 누른 뒤 녹음 버튼을 다시 눌러 시작해주세요.")
-    col_cancel, col_ok = st.columns([1, 1])
-    with col_cancel:
-        if st.button("취소 — 다시 녹음할게요", width='stretch', key="chat_voice_confirm_cancel"):
-            st.session_state["chat_voice_confirm_pending"] = False
-            st.session_state["chat_voice_confirm_key"]     = None
-            st.rerun()
-    with col_ok:
-        if st.button("건너뛸게요 ➤", width='stretch', key="chat_voice_confirm_ok"):
-            st.session_state["chat_voice_confirm_pending"] = False
-            st.session_state["chat_voice_confirm_key"]     = None
-            st.rerun()
-
-
 # ============================================================
 # 현재 단계 인덱스
 # ============================================================
@@ -1316,6 +1299,9 @@ current_stage_idx = stage_index(st.session_state["app_stage"])
 
 # img_file 복원
 img_file = st.session_state.get("uploaded_img", None)
+
+# JSON 불러오기 여부
+from_json = st.session_state.get("report_loaded_from_json", False)
 
 
 # ============================================================
@@ -1329,6 +1315,41 @@ step1_label = (
 )
 
 with st.expander(step1_label, expanded=step1_expanded):
+
+    # ── ✅ JSON 불러오기 UI (항상 STEP 1 안에 노출) ──────────────────
+    with st.expander("📂 이전에 저장한 보고서 불러오기", expanded=False):
+        st.caption("이전에 저장한 JSON 보고서 파일을 올리면 바로 보고서 화면으로 이동해요.")
+        uploaded_json = st.file_uploader(
+            "저장된 JSON 보고서 파일을 올려주세요",
+            type=["json"],
+            key="report_json_uploader",
+        )
+        if uploaded_json:
+            try:
+                loaded = json.loads(uploaded_json.read().decode("utf-8"))
+                if "executive_summary" not in loaded:
+                    st.error("올바른 보고서 JSON 파일이 아니에요.")
+                else:
+                    st.success("보고서를 읽었어요! 아래 버튼을 눌러 불러오세요.")
+                    if st.button("이 보고서 불러오기 ✅", key="load_json_btn"):
+                        st.session_state["report"]                  = loaded
+                        st.session_state["report_errors"]           = loaded.get("report_errors", [])
+                        st.session_state["report_loaded_from_json"] = True
+                        st.session_state["analysis_done"]           = True
+                        if desc := loaded.get("drawing_description"):
+                            st.session_state["drawing_description"] = desc
+                        if age := loaded.get("child_age"):
+                            st.session_state["child_age"] = age
+                        if sex := loaded.get("child_sex"):
+                            st.session_state["child_sex"] = sex
+                        st.session_state["app_stage"] = "done"
+                        st.toast("✅ 보고서를 불러왔어요!")
+                        st.rerun()
+            except Exception as e:
+                st.error(f"JSON 파싱 실패: {e}")
+
+    st.divider()
+
     col_input1, col_input2 = st.columns([1, 1])
 
     with col_input1:
@@ -1366,8 +1387,9 @@ with st.expander(step1_label, expanded=step1_expanded):
 
 # ============================================================
 # STEP 2. 그림 설명 입력 (텍스트 + STT)
+# ── JSON 불러오기 시에는 표시하지 않음
 # ============================================================
-if current_stage_idx >= stage_index("describe"):
+if current_stage_idx >= stage_index("describe") and not from_json:
     step2_expanded = (st.session_state["app_stage"] == "describe")
     step2_label = (
         "2. 그림에 대해 조금 더 알려줘! 🖌️"
@@ -1397,7 +1419,6 @@ if current_stage_idx >= stage_index("describe"):
         with col_desc2:
             st.subheader("📝 그림 설명")
 
-            # ── 완료된 단계: 읽기 전용 표시 ──────────────────────────
             if st.session_state["app_stage"] != "describe":
                 saved_desc = st.session_state.get("drawing_description", "")
                 if saved_desc:
@@ -1405,19 +1426,18 @@ if current_stage_idx >= stage_index("describe"):
                 else:
                     st.caption("(설명 없이 건너뛰었어요)")
 
-            # ── 현재 단계: 입력 UI (음성/텍스트 통합) ─────────────────
             else:
                 show_voice_guide()
 
                 audio_desc = st.audio_input(
-                    "🎙️ 녹음 버튼을 눌러 시작하세요",
+                    "아래 🎙️ 버튼을 누르면 녹음이 시작돼요! 말이 끝나면 빨간 🔴 버튼을 눌러 멈춰주세요.",
                     key="audio_description",
                 )
-                
+
                 if audio_desc:
                     audio_bytes = audio_desc.getvalue()
                     current_audio_hash = hash(audio_bytes)
-                    
+
                     if st.session_state.get("last_audio_desc_hash") != current_audio_hash:
                         with st.spinner("네 목소리를 귀 기울여 듣고 있어... 👂"):
                             transcribed_desc = transcribe_audio(
@@ -1427,20 +1447,19 @@ if current_stage_idx >= stage_index("describe"):
                                 use_enhanced=True,
                             )
                         if transcribed_desc:
-                            # text_area에 즉시 값을 반영하기 위해 session_state 직접 업데이트
-                            st.session_state["stt_desc_editable"] = transcribed_desc
+                            st.session_state["stt_desc_editable"]    = transcribed_desc
                             st.session_state["stt_description_draft"] = transcribed_desc
                         else:
                             st.session_state["stt_description_draft"] = ""
                             st.warning(
                                 "목소리를 잘 못 들었어 😢\n"
-                                "녹음 버튼을 다시 눌러 더 크고 천천히 말해볼래?",
-                                icon="🎙️",
+                                "🎙️ 버튼을 다시 눌러서, 더 크고 천천히 말해볼래?",
+                                icon=None,
                             )
                         st.session_state["last_audio_desc_hash"] = current_audio_hash
 
                 st.caption("✏️ 녹음된 내용을 확인하거나, **직접 글로 설명을 적어주세요!**")
-                
+
                 edited_draft = st.text_area(
                     "🗣️ 그림 설명 (음성 인식 및 직접 입력)",
                     placeholder="녹음하면 여기에 인식된 내용이 나타나요. 마이크가 없다면 직접 타이핑해서 적어주셔도 돼요! ✏️",
@@ -1450,17 +1469,10 @@ if current_stage_idx >= stage_index("describe"):
                 )
 
                 if st.session_state.get("stt_desc_editable"):
-                    st.caption("다시 녹음하려면 녹음 버튼을 다시 눌러 녹음을 시작한 후 정지하면 돼요.")
+                    st.caption("다시 녹음하려면 🎙️ 버튼을 다시 눌러 시작한 후 빨간 🔴 버튼으로 멈추면 돼요.")
 
                 st.write("")
                 col_voice_skip, col_voice_next = st.columns([1, 1])
-                with col_voice_skip:
-                    if st.button("건너뛰기 ⏭️", key="voice_desc_skip", width='stretch'):
-                        st.session_state["drawing_description"]   = ""
-                        st.session_state["description_submitted"] = True
-                        st.session_state["stt_description_draft"] = ""
-                        st.session_state["app_stage"]             = "result"
-                        st.rerun()
 
                 with col_voice_next:
                     if st.button("설명 완료! ✅", key="voice_desc_next", width='stretch'):
@@ -1486,6 +1498,14 @@ if current_stage_idx >= stage_index("describe"):
                             st.session_state["app_stage"] = "result"
                             st.rerun()
 
+                with col_voice_skip:
+                    if st.button("건너뛰기 ⏭️", key="voice_desc_skip", width='stretch'):
+                        st.session_state["drawing_description"]   = ""
+                        st.session_state["description_submitted"] = True
+                        st.session_state["stt_description_draft"] = ""
+                        st.session_state["app_stage"]             = "result"
+                        st.rerun()
+
                 with st.expander("💡 어떻게 설명하면 좋을까요?", expanded=False):
                     st.write("**그림 속 인물에 대해:** 누구를 그렸나요? 어떤 표정인가요?")
                     st.write("**집/나무에 대해:** 어떤 집/나무인가요? 계절이나 날씨는요?")
@@ -1495,8 +1515,9 @@ if current_stage_idx >= stage_index("describe"):
 
 # ============================================================
 # STEP 3. 분석 결과
+# ── JSON 불러오기 시에는 표시하지 않음
 # ============================================================
-if current_stage_idx >= stage_index("result") and st.session_state.get("analysis_done"):
+if current_stage_idx >= stage_index("result") and st.session_state.get("analysis_done") and not from_json:
     step3_expanded = (st.session_state["app_stage"] == "result")
     step3_label = (
         "3. 네 마음속에 이런 보물이 들어있구나! 💎"
@@ -1568,7 +1589,7 @@ if current_stage_idx >= stage_index("result") and st.session_state.get("analysis
                         if notes:
                             st.caption(f"검증 메모: {notes}")
 
-                with st.expander("💡 위치 정보로 보는 아이의 마음"):
+                with st.expander("💡 위치 정보로 보는 아이의 마음", expanded=True):
                     st.write("- **가로 위치**: 왼쪽은 과거/내향성, 오른쪽은 미래/외향성을 의미하기도 해요.")
                     st.write("- **세로 위치**: 상단은 이상/상상력, 하단은 현실 감각을 나타내기도 해요.")
                     st.write("- **크기**: 면적이 클수록 아이에게 중요한 대상일 수 있어요.")
@@ -1580,7 +1601,6 @@ if current_stage_idx >= stage_index("result") and st.session_state.get("analysis
                 with st.expander("📖 입력된 그림 설명", expanded=False):
                     st.write(drawing_desc)
 
-        # 대화 시작 버튼 — 현재 단계일 때만 표시
         if st.session_state["app_stage"] == "result":
             st.divider()
             col_btn1, col_btn2, col_btn3 = st.columns([1, 2, 1])
@@ -1643,8 +1663,9 @@ if current_stage_idx >= stage_index("result") and st.session_state.get("analysis
 
 # ============================================================
 # STEP 4. 대화
+# ── JSON 불러오기 시에는 표시하지 않음
 # ============================================================
-if current_stage_idx >= stage_index("chatting"):
+if current_stage_idx >= stage_index("chatting") and not from_json:
     step4_expanded = (st.session_state["app_stage"] == "chatting")
     step4_label = (
         "4. 우리 같이 도란도란 이야기하자 💬"
@@ -1654,7 +1675,6 @@ if current_stage_idx >= stage_index("chatting"):
 
     with st.expander(step4_label, expanded=step4_expanded):
         if st.session_state["app_stage"] != "chatting":
-            # 완료된 경우 대화 요약만 표시
             conv_queue = st.session_state.get("conv_queue", [])
             for item in conv_queue:
                 st.markdown(f"**{item['group']}**")
@@ -1770,18 +1790,18 @@ if current_stage_idx >= stage_index("chatting"):
 
                 show_voice_guide()
 
-                stt_key = f"stt_result_{g_idx}_{q_idx}"
+                stt_key      = f"stt_result_{g_idx}_{q_idx}"
                 editable_key = f"stt_editable_{g_idx}_{q_idx}"
 
                 audio_input = st.audio_input(
-                    "🎙️ 녹음 버튼을 눌러 시작하세요",
+                    "아래 🎙️ 버튼을 누르면 녹음이 시작돼요! 말이 끝나면 빨간 🔴 버튼을 눌러 멈춰주세요.",
                     key=f"audio_{g_idx}_{q_idx}",
                 )
-                
+
                 if audio_input:
-                    audio_bytes = audio_input.getvalue()
+                    audio_bytes        = audio_input.getvalue()
                     current_audio_hash = hash(audio_bytes)
-                    
+
                     if st.session_state.get(f"last_audio_hash_{g_idx}_{q_idx}") != current_audio_hash:
                         with st.spinner("네 목소리를 귀 기울여 듣고 있어... 👂"):
                             transcribed = transcribe_audio(
@@ -1791,19 +1811,19 @@ if current_stage_idx >= stage_index("chatting"):
                                 use_enhanced=True,
                             )
                         if transcribed:
-                            st.session_state[stt_key] = transcribed
+                            st.session_state[stt_key]      = transcribed
                             st.session_state[editable_key] = transcribed
                         else:
                             st.session_state.pop(stt_key, None)
                             st.warning(
                                 "목소리를 잘 못 들었어 😢\n"
-                                "녹음 버튼을 다시 눌러 더 크고 천천히 말해볼래?",
-                                icon="🎙️",
+                                "🎙️ 버튼을 다시 눌러서, 더 크고 천천히 말해볼래?",
+                                icon=None,
                             )
                         st.session_state[f"last_audio_hash_{g_idx}_{q_idx}"] = current_audio_hash
 
                 st.caption("✏️ 녹음된 내용을 확인하거나, **직접 글로 답변을 적어주세요!**")
-                
+
                 edited_recognized = st.text_area(
                     "🗣️ 답변 (음성 인식 및 직접 입력)",
                     placeholder="녹음하면 여기에 인식된 내용이 나타나요. 마이크가 없다면 직접 타이핑해서 적어주셔도 돼요! ✏️",
@@ -1812,48 +1832,39 @@ if current_stage_idx >= stage_index("chatting"):
                     label_visibility="collapsed",
                 )
 
-                if edited_recognized and edited_recognized.strip():
-                    st.caption("다시 녹음하려면 녹음 버튼을 다시 눌러 녹음을 시작한 후 정지하면 돼요.")
-
-                    st.write("")
-                    col_voice_ok, col_voice_skip = st.columns([2, 1])
-                    with col_voice_ok:
-                        if st.button(
-                            "이 내용으로 답하기 ✅",
-                            key=f"stt_btn_ok_{g_idx}_{q_idx}",
-                            width='stretch',
-                        ):
-                            answer_to_submit = edited_recognized.strip()
-                            st.session_state.pop(stt_key, None)
-                            with st.spinner("생각 중... 💭"):
-                                _handle_answer(answer_to_submit)
-                    with col_voice_skip:
-                        if st.button(
-                            "이 질문 건너뛰기 ⏭️",
-                            key=f"stt_skip_with_text_{g_idx}_{q_idx}",
-                            width='stretch',
-                        ):
-                            st.session_state.pop(stt_key, None)
-                            next_idx = q_idx + 1
-                            if next_idx >= len(questions):
-                                with st.spinner(f"{current_group['group']} 이야기를 정리하는 중..."):
-                                    current_group["summary"] = summarize_group_dialogue(current_group)
-                                st.session_state["current_group_idx"] += 1
-                                st.session_state["current_q_idx"]     = 0
-                                st.session_state.pop("last_reaction", None)
-                            else:
-                                st.session_state["current_q_idx"] = next_idx
-                            st.rerun()
-                else:
-                    st.write("")
+                st.write("")
+                has_answer = bool(edited_recognized and edited_recognized.strip())
+                col_voice_ok, col_voice_skip = st.columns([2, 1])
+                with col_voice_ok:
                     if st.button(
-                        "다음으로 진행하기 ➤",
-                        key=f"stt_no_text_next_{g_idx}_{q_idx}",
+                        "이 내용으로 답하기 ✅",
+                        key=f"stt_btn_ok_{g_idx}_{q_idx}",
+                        width='stretch',
+                        disabled=not has_answer,
+                    ):
+                        answer_to_submit = edited_recognized.strip()
+                        st.session_state.pop(stt_key, None)
+                        with st.spinner("생각 중... 💭"):
+                            _handle_answer(answer_to_submit)
+                with col_voice_skip:
+                    if st.button(
+                        "이 질문 건너뛰기 ⏭️",
+                        key=f"stt_skip_{g_idx}_{q_idx}",
                         width='stretch',
                     ):
-                        st.session_state["chat_voice_confirm_pending"] = True
-                        st.session_state["chat_voice_confirm_key"]     = stt_key
-                        show_chat_voice_confirm_dialog()
+                        st.session_state.pop(stt_key, None)
+                        next_idx = q_idx + 1
+                        if next_idx >= len(questions):
+                            with st.spinner(f"{current_group['group']} 이야기를 정리하는 중..."):
+                                current_group["summary"] = summarize_group_dialogue(current_group)
+                            st.session_state["current_group_idx"] += 1
+                            st.session_state["current_q_idx"]     = 0
+                            st.session_state.pop("last_reaction", None)
+                        else:
+                            st.session_state["current_q_idx"] = next_idx
+                        st.rerun()
+                if not has_answer:
+                    st.caption("💡 녹음하거나 직접 입력한 뒤 답하기 버튼을 눌러주세요.")
 
                 past_qa = list(zip(questions[:q_idx], current_group["answers"]))
                 if past_qa:
@@ -1897,6 +1908,10 @@ if current_stage_idx >= stage_index("reporting"):
         step5_label = "5. 🌈 마음친구가 써준 보고서야!"
         with st.expander(step5_label, expanded=True):
             report = st.session_state["report"]
+
+            # JSON 불러오기 안내
+            if from_json:
+                st.info("📂 저장된 JSON 보고서를 불러왔어요.", icon="📂")
 
             col_title, col_regen_top = st.columns([5, 1])
             with col_title:
@@ -2075,21 +2090,28 @@ if current_stage_idx >= stage_index("reporting"):
             st.divider()
 
             with st.expander("📖 전체 대화 기록 보기"):
-                for item in st.session_state["conv_queue"]:
-                    st.markdown(f"**{item['group']}**")
-                    if item.get("covered_by_description"):
-                        st.caption("📝 그림 설명으로 충분히 파악되어 별도 대화를 진행하지 않았습니다.")
-                    else:
-                        for q, a in zip(item["questions"], item["answers"]):
-                            st.markdown(f"- **Q:** {q}")
-                            st.markdown(f"  **A:** {a}")
-                    st.divider()
+                conv_queue_for_display = st.session_state.get("conv_queue", [])
+                if conv_queue_for_display:
+                    for item in conv_queue_for_display:
+                        st.markdown(f"**{item['group']}**")
+                        if item.get("covered_by_description"):
+                            st.caption("📝 그림 설명으로 충분히 파악되어 별도 대화를 진행하지 않았습니다.")
+                        else:
+                            for q, a in zip(item["questions"], item["answers"]):
+                                st.markdown(f"- **Q:** {q}")
+                                st.markdown(f"  **A:** {a}")
+                        st.divider()
+                else:
+                    st.caption("대화 기록이 없어요. (JSON으로 불러온 보고서)")
 
+            # ✅ child_age, child_sex 포함해서 저장
             report_for_download = {
                 k: v for k, v in report.items()
                 if k not in ("report_errors", "faiss_meta")
             }
             report_for_download["drawing_description"] = st.session_state.get("drawing_description", "")
+            report_for_download["child_age"]           = st.session_state.get("child_age", 7)
+            report_for_download["child_sex"]           = st.session_state.get("child_sex", "남자")
 
             st.download_button(
                 label="📄 보고서 JSON 다운로드",
