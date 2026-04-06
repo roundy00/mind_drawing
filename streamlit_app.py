@@ -16,6 +16,7 @@ import re
 import base64
 import io
 import time
+import datetime
 
 import openai
 import streamlit as st
@@ -134,6 +135,33 @@ st.markdown("""
         font-size: 18px;
         flex-shrink: 0;
         margin-top: 1px;
+    }
+
+    /* ── 추천 대화법 카드 스타일 ── */
+    .talk-card {
+        background: linear-gradient(135deg, #FFF8F0 0%, #FFF0F5 100%);
+        border: 1.5px solid #EAB0C9;
+        border-radius: 14px;
+        padding: 14px 18px;
+        margin-bottom: 10px;
+        font-size: 16px;
+        color: #5D5D5D;
+        line-height: 1.8;
+    }
+    .talk-card-title {
+        font-weight: bold;
+        color: #C47FA0;
+        margin-bottom: 6px;
+        font-size: 15px;
+    }
+    .talk-topic-badge {
+        display: inline-block;
+        background: #EAB0C9;
+        color: white;
+        border-radius: 20px;
+        padding: 3px 12px;
+        margin: 3px;
+        font-size: 14px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -278,9 +306,13 @@ YOLO_VERIFY_SYSTEM = """
 - 나무기둥, 수관, 가지, 뿌리, 나뭇잎 등 나무 구성 요소는
   설명에 나무 관련 내용이 조금이라도 있으면 오탐으로 처리하지 말 것.
   '나무전체'가 탐지되지 않아도 구성 요소만으로 나무가 존재한다고 판단할 수 있음.
-- 오탐으로 처리하는 기준은 오직 하나:
-  설명이 해당 요소의 존재를 명확히 부정할 때만
-  예) "집이 없어요", "나무를 그리지 않았어요", "사람은 없어요"
+- 오탐으로 처리하는 기준은 두 가지:
+  1. 설명이 해당 요소의 존재를 명확히 부정할 때
+     예) "집이 없어요", "나무를 그리지 않았어요", "사람은 없어요"
+  2. 사용자가 AI가 잘못 인식했다고 직접 지적한 요소
+     예) "저건 나무가 아니에요", "그건 사람이 아니라 로봇이에요", "AI가 틀렸어요"
+     → 이 경우 해당 객체를 suspicious_objects에 추가하고,
+       사용자가 올바르다고 언급한 요소가 있다면 description_extras에 추가할 것
 - 반드시 JSON만 반환:
 {
   "verified_objects": [유효하다고 판단된 객체 name 목록],
@@ -829,6 +861,45 @@ EXPLORATION_QUESTIONS_SYSTEM = """
 ⚠️ 진단이나 치료 목적의 질문이 아닌, 교육적 자기 탐색 질문만 생성하세요.
 """
 
+RECOMMENDED_COMMUNICATION_SYSTEM = """
+당신은 아동 미술 심리 전문가이자 부모·교사 코칭 전문가입니다.
+그림 분석 결과와 아이와의 대화 기록을 바탕으로,
+이 아이와 대화할 때 가장 효과적인 '추천 대화법'과 '추천 대화 주제'를 제안하세요.
+
+작성 원칙:
+- 이 서비스는 한국어 서비스입니다. 반드시 한국어로 작성하세요.
+- 부모·교사가 일상에서 바로 활용할 수 있는 실용적인 내용을 담을 것
+- 아이의 나이에 맞는 쉬운 언어와 접근법을 제안할 것
+- 진단·치료적 표현 절대 금지; 교육적·공감적 관점에서 작성할 것
+- 그림 분석 결과(색채, 구성, 감정 분석)와 대화 기록을 근거로 맞춤형 제안을 할 것
+- JSON 외 문장을 앞뒤에 절대 붙이지 말 것
+
+출력: 아래 JSON 구조로만 반환하세요.
+{
+  "communication_styles": [
+    {
+      "style_name": "대화법 이름 (예: 감정 반영하기, 개방형 질문, 함께 상상하기 등)",
+      "description": "이 대화법에 대한 설명 (1~2문장)",
+      "example": "실제 대화 예시 (부모/교사가 아이에게 할 수 있는 말 1~2문장)",
+      "when_to_use": "언제 사용하면 좋은지 (1문장)"
+    }
+  ],
+  "recommended_topics": [
+    {
+      "topic": "대화 주제 제목",
+      "description": "이 주제를 나누면 좋은 이유 (1문장)",
+      "starter": "대화를 시작할 수 있는 첫 마디 예시"
+    }
+  ],
+  "caregiver_tips": ["주의할 점 또는 도움이 되는 팁 1", "팁 2", "팁 3"]
+}
+
+communication_styles는 3개, recommended_topics는 4~5개, caregiver_tips는 3개를 생성하세요.
+
+⚠️ 본 내용은 교육 목적의 참고 자료이며, 의료적 진단이나 치료를 대체하지 않습니다.
+"""
+
+
 REPORT_SYSTEM = """
 미술 심리 전문가로서 다른 전문가들의 보고서(감정 언어 분석, 탐색 질문)를 포함한
 전체 관찰 결과를 종합적으로 심리 분석하여 전문적이고 객관적인 결론을 작성하세요.
@@ -998,6 +1069,18 @@ def generate_report(
         "purpose":    "(생성 실패)",
     }
 
+    recommended_communication = _safe_llm_json(
+        RECOMMENDED_COMMUNICATION_SYSTEM,
+        base_ctx + emotion_block,
+        step_name="추천 대화법 및 주제 생성",
+        errors=errors,
+        max_tokens=1200,
+    ) or {
+        "communication_styles": [],
+        "recommended_topics":   [],
+        "caregiver_tips":       [],
+    }
+
     rag_query = (
         f"HTP 그림 {', '.join(i['group'] for i in conversation_queue)} 색채 심리"
     )
@@ -1026,8 +1109,9 @@ def generate_report(
             "color_analysis": "",    "object_analysis": "",
             "dialogue_insights": "", "recommendations": [],
             "references_used": "",
-            "emotion_analysis":      emotion_result,
-            "exploration_questions": exploration_result,
+            "emotion_analysis":           emotion_result,
+            "exploration_questions":      exploration_result,
+            "recommended_communication":  recommended_communication,  
             "report_errors": errors,
             "faiss_meta":    faiss_meta,
         }
@@ -1063,10 +1147,11 @@ def generate_report(
             "references_used": "",
         }
 
-    report_parsed["emotion_analysis"]      = emotion_result
-    report_parsed["exploration_questions"] = exploration_result
-    report_parsed["report_errors"]         = errors
-    report_parsed["faiss_meta"]            = faiss_meta
+    report_parsed["emotion_analysis"]          = emotion_result
+    report_parsed["exploration_questions"]     = exploration_result
+    report_parsed["recommended_communication"] = recommended_communication  # ✅ 추가
+    report_parsed["report_errors"]             = errors
+    report_parsed["faiss_meta"]                = faiss_meta
     return report_parsed
 
 
@@ -1157,7 +1242,6 @@ def init_state():
         "description_submitted":   False,
         "stt_description_draft":   "",
         "desc_voice_confirm_pending": False,
-        # ✅ 추가: JSON 불러오기 여부
         "report_loaded_from_json": False,
     }
     for k, v in defaults.items():
@@ -1407,7 +1491,10 @@ if current_stage_idx >= stage_index("describe") and not from_json:
         col_desc1, col_desc2 = st.columns([1.2, 1])
 
         with col_desc1:
-            if img_file:
+            yolo_plotted = st.session_state.get("yolo_result", {}).get("plotted_image")
+            if yolo_plotted is not None:
+                st.image(yolo_plotted, width='stretch', caption="AI가 찾아낸 마음조각들이야!")
+            elif img_file:
                 st.image(Image.open(img_file), width='stretch', caption="네가 그린 그림이야!")
             yolo_result = st.session_state.get("yolo_result", {})
             objects     = yolo_result.get("objects", [])
@@ -1889,7 +1976,7 @@ if current_stage_idx >= stage_index("reporting"):
     # 보고서 생성 중
     if st.session_state["app_stage"] == "reporting" and st.session_state["report"] is None:
         st.header("5. 네 마음 보고서를 만들고 있어! 📋")
-        with st.spinner("감정 분석 → 탐색 질문 → 종합 보고서 순서로 작성 중이에요... ✍️ (2~3분 소요)"):
+        with st.spinner("감정 분석 → 탐색 질문 → 추천 대화법 → 종합 보고서 순서로 작성 중이에요... ✍️ (2~3분 소요)"):
             report = generate_report(
                 color_result        = st.session_state["color_result"],
                 yolo_result         = st.session_state["yolo_result"],
@@ -2053,6 +2140,79 @@ if current_stage_idx >= stage_index("reporting"):
 
             st.divider()
 
+            rec_comm = report.get("recommended_communication", {})
+            if rec_comm:
+                st.subheader("💌 추천 대화법 & 추천 대화 주제")
+                st.caption(
+                    "아이와 나눌 때 도움이 되는 대화법과 주제를 제안해요. "
+                    "부모님·선생님이 일상에서 바로 활용해보세요! 😊"
+                )
+
+                # ── 추천 대화법 ──────────────────────────────────────────
+                styles = rec_comm.get("communication_styles", [])
+                if styles:
+                    st.markdown("#### 🗣️ 추천 대화법")
+                    for style in styles:
+                        style_name  = style.get("style_name", "")
+                        description = style.get("description", "")
+                        example     = style.get("example", "")
+                        when_to_use = style.get("when_to_use", "")
+
+                        card_html = f"""
+<div class="talk-card">
+  <div class="talk-card-title">✦ {style_name}</div>
+  <div style="margin-bottom:6px;">{description}</div>
+  {'<div style="background:#fff5f9;border-left:3px solid #EAB0C9;padding:6px 10px;border-radius:6px;margin-bottom:6px;font-size:15px;"><b>💬 예시 대화:</b> {}</div>'.format(example) if example else ''}
+  {'<div style="font-size:14px;color:#999;">🕐 {}</div>'.format(when_to_use) if when_to_use else ''}
+</div>""".strip()
+                        st.markdown(card_html, unsafe_allow_html=True)
+
+                st.write("")
+
+                # ── 추천 대화 주제 ───────────────────────────────────────
+                topics = rec_comm.get("recommended_topics", [])
+                if topics:
+                    st.markdown("#### 🌱 추천 대화 주제")
+                    cols = st.columns(min(len(topics), 3))
+                    for idx, topic in enumerate(topics):
+                        col = cols[idx % len(cols)]
+                        with col:
+                            topic_name  = topic.get("topic", "")
+                            description = topic.get("description", "")
+                            starter     = topic.get("starter", "")
+                            st.markdown(
+                                f"""
+<div class="talk-card" style="height:100%;">
+  <div class="talk-card-title">🌿 {topic_name}</div>
+  <div style="font-size:15px;margin-bottom:6px;">{description}</div>
+  {'<div style="background:#fff5f9;border-left:3px solid #EAB0C9;padding:6px 10px;border-radius:6px;font-size:14px;"><b>💬 시작 멘트:</b> "{}"</div>'.format(starter) if starter else ''}
+</div>""".strip(),
+                                unsafe_allow_html=True,
+                            )
+
+                st.write("")
+
+                # ── 보호자 팁 ────────────────────────────────────────────
+                tips = rec_comm.get("caregiver_tips", [])
+                if tips:
+                    st.markdown("#### 💡 보호자(부모·교사)를 위한 팁")
+                    tips_html = "".join(
+                        f'<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;">'
+                        f'<span style="color:#EAB0C9;font-size:18px;flex-shrink:0;">✔</span>'
+                        f'<span style="font-size:16px;">{tip}</span></div>'
+                        for tip in tips
+                    )
+                    st.markdown(
+                        f'<div class="talk-card">{tips_html}</div>',
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.subheader("💌 추천 대화법 & 추천 대화 주제")
+                st.caption("추천 대화법 데이터가 없어요. 🔁 재생성 버튼을 눌러보세요.")
+
+            st.divider()
+            # ============================================================
+
             if recs := report.get("recommendations"):
                 st.subheader("💡 선생님·부모님께 드리는 참고 사항")
                 for r in recs:
@@ -2104,19 +2264,24 @@ if current_stage_idx >= stage_index("reporting"):
                 else:
                     st.caption("대화 기록이 없어요. (JSON으로 불러온 보고서)")
 
-            # ✅ child_age, child_sex 포함해서 저장
+            # JSON 다운로드 (recommended_communication 포함)
             report_for_download = {
                 k: v for k, v in report.items()
                 if k not in ("report_errors", "faiss_meta")
             }
-            report_for_download["drawing_description"] = st.session_state.get("drawing_description", "")
-            report_for_download["child_age"]           = st.session_state.get("child_age", 7)
-            report_for_download["child_sex"]           = st.session_state.get("child_sex", "남자")
+            report_for_download["drawing_description"]    = st.session_state.get("drawing_description", "")
+            report_for_download["child_age"]              = st.session_state.get("child_age", 7)
+            report_for_download["child_sex"]              = st.session_state.get("child_sex", "남자")
+
+            # 파일명 생성
+            project_name = "마음친구보고서"
+            now = datetime.datetime.now().strftime("%Y%m%d%H%M")
+            filename = f"{project_name}_{now}.json"
 
             st.download_button(
                 label="📄 보고서 JSON 다운로드",
                 data=json.dumps(report_for_download, ensure_ascii=False, indent=2),
-                file_name="htp_report.json",
+                file_name=filename,
                 mime="application/json",
             )
 
